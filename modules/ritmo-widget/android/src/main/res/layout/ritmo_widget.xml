@@ -1,0 +1,29 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+  android:orientation="vertical" android:padding="16dp" android:background="@drawable/ritmo_widget_background">
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+    <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+      android:text="ritmo." android:textSize="18sp" android:textStyle="bold" android:textColor="#243D32" />
+    <TextView android:id="@+id/widget_date" android:layout_width="wrap_content" android:layout_height="wrap_content"
+      android:text="HOJE" android:textSize="12sp" android:textColor="#647269" />
+  </LinearLayout>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+    android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+    <ImageView android:id="@+id/widget_face" android:layout_width="56dp" android:layout_height="56dp"
+      android:src="@drawable/ritmo_face_sad" android:contentDescription="Carinha esperando seu treino" />
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+      android:orientation="vertical" android:layout_marginStart="12dp">
+      <TextView android:id="@+id/widget_title" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Bora treinar?" android:textSize="20sp" android:textStyle="bold" android:textColor="#243D32"
+        android:maxLines="2" android:ellipsize="end" />
+      <TextView android:id="@+id/widget_detail" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Seus treinos de hoje" android:textSize="13sp" android:textColor="#647269"
+        android:maxLines="2" android:ellipsize="end" android:layout_marginTop="3dp" />
+    </LinearLayout>
+  </LinearLayout>
+  <TextView android:id="@+id/widget_progress" android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:text="Um sorriso a cada dia concluído" android:textSize="12sp" android:textColor="#243D32"
+    android:maxLines="1" android:ellipsize="end" />
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp"
+    android:text="Toque para abrir o Ritmo →" android:textSize="11sp" android:textColor="#647269" />
+</LinearLayout>
