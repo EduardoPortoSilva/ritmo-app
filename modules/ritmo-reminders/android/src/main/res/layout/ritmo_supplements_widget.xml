@@ -1,0 +1,21 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/supplement_widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+  android:orientation="vertical" android:padding="16dp" android:background="@drawable/supplement_widget_background">
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+    <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="ritmo. suplementos" android:textColor="#243D32" android:textStyle="bold" android:textSize="15sp" android:maxLines="1" android:ellipsize="end" />
+    <TextView android:id="@+id/supplement_widget_date" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="HOJE" android:textColor="#647269" android:textSize="12sp" />
+  </LinearLayout>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:gravity="center_vertical">
+    <TextView android:id="@+id/supplement_widget_badge" android:layout_width="32dp" android:layout_height="wrap_content" android:text="○" android:textSize="24sp" android:textColor="#243D32" />
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+      <TextView android:id="@+id/supplement_widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Seus hábitos de hoje" android:textSize="17sp" android:textStyle="bold" android:textColor="#243D32" android:maxLines="1" android:ellipsize="end" />
+      <TextView android:id="@+id/supplement_widget_progress" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Suplementos e sequências" android:textSize="12sp" android:textColor="#647269" />
+    </LinearLayout>
+  </LinearLayout>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:gravity="center_vertical">
+    <TextView android:id="@+id/supplement_widget_row1" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="○ Seus suplementos" android:textSize="14sp" android:textColor="#243D32" android:maxLines="1" android:ellipsize="end" android:paddingVertical="3dp" />
+    <TextView android:id="@+id/supplement_widget_row2" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Acompanhe um dia de cada vez" android:textSize="14sp" android:textColor="#243D32" android:maxLines="1" android:ellipsize="end" android:paddingVertical="3dp" />
+    <TextView android:id="@+id/supplement_widget_row3" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#243D32" android:maxLines="1" android:ellipsize="end" android:paddingVertical="3dp" />
+  </LinearLayout>
+  <TextView android:id="@+id/supplement_widget_footer" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Toque para registrar no Ritmo →" android:textSize="11sp" android:textColor="#647269" android:maxLines="1" android:ellipsize="end" />
+</LinearLayout>
