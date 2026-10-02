@@ -1,5 +1,3 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
 # dependencies
 node_modules/
 
@@ -9,33 +7,70 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native signing files and packaged builds
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
+*.pem
 *.mobileprovision
+*.apk
+*.aab
+*.ipa
 
 # Metro
 .metro-health-check*
 
-# debug
+# Logs
+*.log
 npm-debug.*
 yarn-debug.*
 yarn-error.*
 
-# macOS
+# OS and local editor files
 .DS_Store
-*.pem
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+# Local agent documentation and configuration
+/.codex/
+/.claude/
 
-# local env files
-.env*.local
+# Local environment and credentials (keep example files)
+.env*
+!.env.example
+!.env.*.example
+*signing*.properties
+credentials.json
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 
-# generated native folders
+# Generated native folders; keep modules/*/android/src and build.gradle
 /ios
 /android
+modules/*/android/build/
+modules/*/android/.gradle/
+modules/*/android/.cxx/
+modules/*/android/.externalNativeBuild/
+modules/*/android/local.properties
+
+# Test artifacts and caches
+.playwright-results/
+test-results/
+playwright-report/
+coverage/
+.nyc_output/
+.cache/
+
+# Local SDKs, signing credentials and tools
+.tools/
+
+# Personal data exports
+ritmo-backup*.json
