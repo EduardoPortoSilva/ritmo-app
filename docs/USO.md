@@ -48,7 +48,11 @@ Cadastre hábitos na aba **Suplementos** e marque **Tomei hoje**; a marcação p
 
 Um horário de lembrete é opcional. No APK Android, salvar com lembrete solicita a permissão de notificações. Se negada, é possível manter o rascunho ou salvar sem lembrete. O sistema pode atrasar avisos em economia de bateria; forçar parada pode desativá-los até abrir o app novamente.
 
-Adicione os widgets pela tela Início ou pela lista do launcher. O widget de treinos considera sessões finalizadas hoje, inclusive parciais. O de suplementos mostra pendências e sequências e abre a aba correspondente; a confirmação acontece dentro do app. Widgets não exigem que o JavaScript fique aberto, mas suas atualizações também podem ser adiadas pelo Android.
+Adicione os widgets pela tela Início ou pela lista do launcher. Ambos abrem como faixas compactas 4×1, com contagem diária e resumo de pendências. Ao redimensionar, podem virar faixas 3×1 ou cartões verticais 1×2, conforme a grade do launcher. Nomes longos são abreviados, e `+N` indica outros itens pendentes. Em 1×1, o resumo e `+N` ficam ocultos para preservar a contagem.
+
+O widget de treinos usa um ponto para indicar pendência, conclusão ou descanso e considera sessões finalizadas hoje, inclusive parciais. O de suplementos mostra quantos foram tomados hoje e os pendentes; as sequências continuam na aba Suplementos. Tocar abre o app ou a aba correspondente; a confirmação acontece dentro do app. Widgets não exigem que o JavaScript fique aberto, mas suas atualizações também podem ser adiadas pelo Android.
+
+Após atualizar uma versão antiga, o launcher pode conservar o tamanho ampliado de um widget existente. Para obter o novo tamanho inicial, remova somente o widget e adicione-o novamente; essa ação não apaga dados do aplicativo.
 
 ## Importar e preservar dados
 

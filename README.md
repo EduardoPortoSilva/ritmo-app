@@ -15,7 +15,7 @@ Aplicativo pessoal de musculação, cardio e hábitos diários, com interface em
 - **Suplementos:** registro diário, sequência de dias e lembretes locais opcionais no Android.
 - **Importação por texto:** planejamento em JSON `ritmo/1`, com conferência e prévia antes de importar o lote.
 - **Backup manual:** exportação e restauração do banco completo em JSON `ritmo-backup/1`.
-- **Android nativo:** widgets de treinos e suplementos e aviso de descanso mesmo com outro app aberto ou a tela apagada.
+- **Android nativo:** widgets compactos de treinos e suplementos em 4×1, 3×1 ou cartão vertical 1×2 e aviso de descanso mesmo com outro app aberto ou a tela apagada.
 
 Os dados do navegador e do Android são independentes. Não há sincronização automática, prescrição de exercícios ou doses, nem controle da esteira.
 
@@ -132,7 +132,7 @@ Leia [modelo de dados](docs/DADOS.md), [backup](docs/BACKUP-E-ASSINATURA.md) e [
 
 O [índice de documentação](docs/README.md) reúne o guia de uso, arquitetura, regras, testes, cardio, músculos, importação e publicação no Git. Para contribuir, leia [CONTRIBUTING.md](CONTRIBUTING.md) e [AGENTS.md](AGENTS.md).
 
-Versão do app: **1.0.0**, Android `versionCode` **4**. [Estado e validação](docs/ESTADO.md) separa as verificações atuais das evidências históricas. APKs e relatórios locais não acompanham automaticamente um clone do código.
+Versão do app: **1.0.5**, Android `versionCode` **7**. [Estado e validação](docs/ESTADO.md) separa as verificações atuais das evidências históricas. APKs e relatórios locais não acompanham automaticamente um clone do código.
 
 ## Licença
 

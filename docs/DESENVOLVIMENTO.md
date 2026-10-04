@@ -83,7 +83,7 @@ O widget Android fica em `modules/ritmo-widget/`, ligado automaticamente pelo Ex
 
 Após alterar o módulo, compile o APK e execute também `:ritmo-widget:testDebugUnitTest` no Gradle. Os testes JVM usam JUnit apenas como dependência de teste. O cálculo nativo é a referência de calendário; os testes Node validam a projeção dos dados e os fluxos web continuam cobrindo a regressão do app. Mudanças no código nativo exigem novo APK, não apenas recarga do JavaScript.
 
-O roteiro manual está em `modules/ritmo-widget/README.md`. Use AVD exclusivo e dados fictícios para testar salvar/excluir treinos e as carinhas. Não use o histórico do usuário para esse teste. `adb shell am kill <pacote>` testa encerramento de processo em segundo plano; `force-stop` tem semântica diferente e pode desativar widgets no Android até reabrir o app.
+O roteiro manual está em `modules/ritmo-widget/README.md`. Use AVD exclusivo e dados fictícios para testar estados pendentes, concluídos e descanso, nomes longos, fonte ampliada e formatos 1×2, 3×1 e 4×1 nos dois widgets. Não use o histórico do usuário para esse teste. `adb shell am kill <pacote>` testa encerramento de processo em segundo plano; `force-stop` tem semântica diferente e pode desativar widgets no Android até reabrir o app.
 
 ## Suplementos e lembretes
 

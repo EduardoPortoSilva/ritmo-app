@@ -1,5 +1,19 @@
 # TODO
 
+## Widgets compactos — proposta aprovada em 2026-10-03
+
+- [x] **Adotar a versão compacta nos widgets Android de treinos e suplementos.**
+  - O usuário escolheu a proposta visual **01 · Faixas compactas**, implementada em 2026-10-03.
+  - Referência visual local, fora do Git: `../output/widget-propostas-20261003/01-faixas-compactas.png`. A imagem é conceitual e usa dados fictícios; a descrição abaixo permite retomar a tarefa mesmo sem esse arquivo.
+  - Manter dois widgets independentes em faixas horizontais baixas, com alvo de **4×1 células cada**, sujeito à validação no launcher e com fonte ampliada. Preservar a paleta clara com verde escuro e pequenos destaques verde-lima.
+  - **Treinos:** cabeçalho discreto `ritmo. · Treinos`, contagem de concluídos/previstos e nome do treino pendente em destaque. Usar indicador de estado pequeno no lugar da carinha grande. Os nomes da imagem são ilustrativos; não inferir grupos musculares pelo nome da rotina.
+  - **Suplementos:** cabeçalho discreto `ritmo. · Suplementos`, contagem de registrados/total e resumo `Faltam: …` com os nomes pendentes. Retirar as sequências de dias da apresentação compacta.
+  - Remover a data, os títulos genéricos e os rodapés explicativos do compacto. Para vários itens ou nomes longos, priorizar o primeiro pendente e resumir os restantes com `+N`, preservando a legibilidade.
+  - Prever mensagens curtas para conclusão, dia sem treino e ausência de programação/cadastro, mantendo as regras atuais de contagem e conclusão. Preservar a abertura do app pelo widget de treinos e da aba de suplementos pelo respectivo widget.
+  - Ajustar os limites de tamanho e a composição ao redimensionar; reduzir conteúdo e espaços antes de reduzir fontes. Manter áreas de toque adequadas e evitar elementos que pareçam caixas de confirmação sem essa função.
+  - As propostas 02 e 03, o registro direto de suplementos e ações novas como retomar treino pelo widget não fazem parte desta escolha.
+  - Validados no Android com nomes longos, múltiplas pendências, estados concluídos/vazios, fonte ampliada e redimensionamento horizontal; novo APK gerado. Em 2026-10-04, ambos ganharam o cartão vertical 1×2, com resumo oculto em 1×1 e redimensionamento nos dois eixos; entrega 1.0.5, build 7.
+
 ## Ordem sugerida de execução — 2026-09-28
 
 1. **Pausa e estado vazio do planejamento de força — concluído.** Há ação direta para pausar/retomar; os textos distinguem força, cardio e histórico e contextualizam o conjunto vazio.
