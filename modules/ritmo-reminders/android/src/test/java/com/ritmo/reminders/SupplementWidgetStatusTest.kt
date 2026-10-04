@@ -24,19 +24,36 @@ class SupplementWidgetStatusTest {
     val doneA = a.copy(takenOn = a.takenOn + "2026-09-17")
     val partial = supplementWidgetStatus(listOf(doneA, b), time(17), zone)
     assertFalse(partial.allDone)
-    assertEquals("1 de 2 tomados hoje", partial.progress)
-    assertEquals("○ Whey · 0 dias", partial.rows[0])
-    assertEquals("✓ Creatina · 3 dias", partial.rows[1])
-    assertTrue(supplementWidgetStatus(listOf(doneA, b.copy(takenOn = setOf("2026-09-17"))), time(17), zone).allDone)
+    assertEquals("1/2", partial.count)
+    assertEquals("Faltam: Whey", partial.summary)
+    assertEquals("Whey", partial.portraitSummary)
+    val finished = supplementWidgetStatus(listOf(doneA, b.copy(takenOn = setOf("2026-09-17"))), time(17), zone)
+    assertTrue(finished.allDone)
+    assertEquals("2/2", finished.count)
+    assertEquals("Tudo em dia!", finished.summary)
+    assertEquals("Em dia!", finished.portraitSummary)
     assertFalse(supplementWidgetStatus(listOf(a, b), time(17), zone).allDone)
   }
 
-  @Test fun emptyAndLongListsHaveClearNavigation() {
+  @Test fun multiplePendingNamesStayReadable() {
+    val two = supplementWidgetStatus(listOf(a, b), time(17), zone)
+    assertEquals("Faltam: Creatina e Whey", two.summary)
+    assertEquals("Faltam: Creatina", two.narrowSummary)
+    assertEquals("", two.extra)
+    assertEquals("+1", two.narrowExtra)
+    assertEquals("Creatina", two.portraitSummary)
+    val many = supplementWidgetStatus(List(5) { a.copy(id = "$it", name = "Suplemento com nome extremamente comprido") }, time(17), zone)
+    assertEquals("Faltam: Suplemento com nom\u2026", many.summary)
+    assertEquals("Faltam: Suplemento\u2026", many.narrowSummary)
+    assertEquals("+4", many.extra)
+    assertEquals("+4", many.narrowExtra)
+    assertEquals("Suplemento com n\u2026", many.portraitSummary)
+  }
+
+  @Test fun emptyListHasClearNavigation() {
     val empty = supplementWidgetStatus(emptyList(), time(17), zone)
-    assertEquals("Seu hábito começa aqui", empty.title)
+    assertEquals("Cadastre suplementos", empty.summary)
+    assertEquals("Sem cadastro", empty.portraitSummary)
     assertFalse(empty.allDone)
-    val many = supplementWidgetStatus(List(5) { a.copy(id = "$it") }, time(17), zone)
-    assertEquals(3, many.rows.size)
-    assertTrue(many.footer.startsWith("+2 no app"))
   }
 }

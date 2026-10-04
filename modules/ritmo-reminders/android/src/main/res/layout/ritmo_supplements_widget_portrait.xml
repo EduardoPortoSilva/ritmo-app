@@ -1,0 +1,26 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/supplement_widget_root" android:layout_width="match_parent"
+  android:layout_height="match_parent" android:orientation="vertical" android:gravity="center"
+  android:paddingHorizontal="5dp" android:paddingVertical="8dp"
+  android:background="@drawable/supplement_widget_background">
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:gravity="center" android:text="ritmo." android:textSize="11sp" android:textStyle="bold"
+    android:textColor="#243D32" android:maxLines="1" android:includeFontPadding="false" />
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_marginTop="4dp" android:gravity="center" android:text="SUPL."
+    android:textSize="9sp" android:textColor="#647269" android:maxLines="1"
+    android:includeFontPadding="false" />
+  <TextView android:id="@+id/supplement_widget_count" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center"
+    android:text="1/3" android:textSize="17sp" android:textStyle="bold"
+    android:textColor="#243D32" android:includeFontPadding="false" />
+  <TextView android:id="@+id/supplement_widget_summary" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center"
+    android:text="Creatina" android:textSize="11sp" android:textStyle="bold"
+    android:textColor="#243D32" android:maxLines="3" android:ellipsize="end"
+    android:includeFontPadding="false" />
+  <TextView android:id="@+id/supplement_widget_extra" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center"
+    android:text="+1" android:textSize="11sp" android:textStyle="bold"
+    android:textColor="#647269" android:includeFontPadding="false" android:visibility="gone" />
+</LinearLayout>

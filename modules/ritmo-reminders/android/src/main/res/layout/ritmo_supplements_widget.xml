@@ -1,21 +1,30 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   android:id="@+id/supplement_widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
-  android:orientation="vertical" android:padding="16dp" android:background="@drawable/supplement_widget_background">
+  android:orientation="vertical" android:gravity="center_vertical" android:paddingHorizontal="13dp"
+  android:paddingVertical="7dp" android:background="@drawable/supplement_widget_background">
   <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
-    <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="ritmo. suplementos" android:textColor="#243D32" android:textStyle="bold" android:textSize="15sp" android:maxLines="1" android:ellipsize="end" />
-    <TextView android:id="@+id/supplement_widget_date" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="HOJE" android:textColor="#647269" android:textSize="12sp" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+      android:text="ritmo." android:textSize="14sp" android:textStyle="bold" android:textColor="#243D32"
+      android:includeFontPadding="false" />
+    <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+      android:layout_marginStart="5dp" android:text="&#183; Suplementos" android:textSize="13sp"
+      android:textColor="#647269" android:maxLines="1" android:ellipsize="end"
+      android:includeFontPadding="false" />
+    <TextView android:id="@+id/supplement_widget_count" android:layout_width="wrap_content" android:layout_height="wrap_content"
+      android:text="1/3" android:textSize="14sp" android:textStyle="bold" android:textColor="#647269"
+      android:includeFontPadding="false" />
   </LinearLayout>
-  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:gravity="center_vertical">
-    <TextView android:id="@+id/supplement_widget_badge" android:layout_width="32dp" android:layout_height="wrap_content" android:text="○" android:textSize="24sp" android:textColor="#243D32" />
-    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
-      <TextView android:id="@+id/supplement_widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Seus hábitos de hoje" android:textSize="17sp" android:textStyle="bold" android:textColor="#243D32" android:maxLines="1" android:ellipsize="end" />
-      <TextView android:id="@+id/supplement_widget_progress" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Suplementos e sequências" android:textSize="12sp" android:textColor="#647269" />
-    </LinearLayout>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_marginTop="4dp" android:gravity="center_vertical">
+    <TextView android:id="@+id/supplement_widget_summary" android:layout_width="0dp" android:layout_weight="1"
+      android:layout_height="wrap_content" android:text="Faltam: Creatina e Whey"
+      android:textSize="17sp" android:textStyle="bold" android:textColor="#243D32"
+      android:maxLines="1" android:ellipsize="end" android:includeFontPadding="false" />
+    <TextView android:id="@+id/supplement_widget_extra" android:layout_width="wrap_content" android:layout_height="wrap_content"
+      android:layout_marginStart="5dp" android:text="+1" android:textSize="15sp" android:textStyle="bold"
+      android:textColor="#243D32" android:includeFontPadding="false" android:visibility="gone" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+      android:layout_marginStart="5dp" android:text="&#8250;" android:textSize="25sp"
+      android:textColor="#647269" android:includeFontPadding="false" android:importantForAccessibility="no" />
   </LinearLayout>
-  <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:gravity="center_vertical">
-    <TextView android:id="@+id/supplement_widget_row1" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="○ Seus suplementos" android:textSize="14sp" android:textColor="#243D32" android:maxLines="1" android:ellipsize="end" android:paddingVertical="3dp" />
-    <TextView android:id="@+id/supplement_widget_row2" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Acompanhe um dia de cada vez" android:textSize="14sp" android:textColor="#243D32" android:maxLines="1" android:ellipsize="end" android:paddingVertical="3dp" />
-    <TextView android:id="@+id/supplement_widget_row3" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#243D32" android:maxLines="1" android:ellipsize="end" android:paddingVertical="3dp" />
-  </LinearLayout>
-  <TextView android:id="@+id/supplement_widget_footer" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Toque para registrar no Ritmo →" android:textSize="11sp" android:textColor="#647269" android:maxLines="1" android:ellipsize="end" />
 </LinearLayout>

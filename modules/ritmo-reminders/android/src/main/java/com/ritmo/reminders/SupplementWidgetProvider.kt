@@ -8,16 +8,18 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 class SupplementWidgetProvider : AppWidgetProvider() {
   override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = refresh(context)
+  override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, newOptions: Bundle?) {
+    super.onAppWidgetOptionsChanged(context, manager, id, newOptions)
+    refresh(context)
+  }
   override fun onReceive(context: Context, intent: Intent) {
     super.onReceive(context, intent)
     if (intent.action in setOf(DAY_CHANGED, Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_DATE_CHANGED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED, Intent.ACTION_MY_PACKAGE_REPLACED)) refresh(context)
@@ -55,24 +57,27 @@ class SupplementWidgetProvider : AppWidgetProvider() {
         val raw = context.getSharedPreferences(PREFS, 0).getString("snapshot", "[]")!!
         supplementWidgetStatus(parse(raw), System.currentTimeMillis())
       } catch (_: Exception) {
-        SupplementWidgetStatus("Abra o Ritmo", "Vamos atualizar seus suplementos", emptyList(), "Toque para continuar →", false)
+        SupplementWidgetStatus("\u2014", "Abra o Ritmo", allDone = false)
       }
-      val views = RemoteViews(context.packageName, R.layout.ritmo_supplements_widget).apply {
-        setTextViewText(R.id.supplement_widget_date, SimpleDateFormat("dd/MM", Locale.forLanguageTag("pt-BR")).format(Date()))
-        setTextViewText(R.id.supplement_widget_title, status.title)
-        setTextViewText(R.id.supplement_widget_progress, status.progress)
-        setTextViewText(R.id.supplement_widget_footer, status.footer)
-        val rowIds = listOf(R.id.supplement_widget_row1, R.id.supplement_widget_row2, R.id.supplement_widget_row3)
-        rowIds.forEachIndexed { index, id ->
-          setViewVisibility(id, if (index < status.rows.size) View.VISIBLE else View.GONE)
-          setTextViewText(id, status.rows.getOrElse(index) { "" })
+      ids.forEach { id ->
+        val options = manager.getAppWidgetOptions(id)
+        val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250)
+        val portrait = width < 180
+        val short = portrait && options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 54) < 120
+        val layout = if (portrait) R.layout.ritmo_supplements_widget_portrait else R.layout.ritmo_supplements_widget
+        val views = RemoteViews(context.packageName, layout).apply {
+          setTextViewText(R.id.supplement_widget_count, status.count)
+          setTextViewText(R.id.supplement_widget_summary, if (portrait) status.portraitSummary else if (width < 300) status.narrowSummary else status.summary)
+          setViewVisibility(R.id.supplement_widget_summary, if (short) View.GONE else View.VISIBLE)
+          val extra = if (portrait || width < 300) status.narrowExtra else status.extra
+          setTextViewText(R.id.supplement_widget_extra, extra)
+          setViewVisibility(R.id.supplement_widget_extra, if (short || extra.isEmpty()) View.GONE else View.VISIBLE)
+          setContentDescription(R.id.supplement_widget_root, "Suplementos: ${status.count}. ${status.summary}. Toque para abrir suplementos no Ritmo.")
+          val open = Intent(Intent.ACTION_VIEW, Uri.parse("ritmo://suplementos")).setPackage(context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+          setOnClickPendingIntent(R.id.supplement_widget_root, PendingIntent.getActivity(context, 201, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
         }
-        setTextViewText(R.id.supplement_widget_badge, if (status.allDone) "✓" else "○")
-        setContentDescription(R.id.supplement_widget_badge, if (status.allDone) "Todos os suplementos tomados hoje" else "Suplementos pendentes")
-        val open = Intent(Intent.ACTION_VIEW, Uri.parse("ritmo://suplementos")).setPackage(context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        setOnClickPendingIntent(R.id.supplement_widget_root, PendingIntent.getActivity(context, 201, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+        manager.updateAppWidget(id, views)
       }
-      manager.updateAppWidget(ids, views)
       val midnight = Calendar.getInstance().apply {
         add(Calendar.DAY_OF_MONTH, 1); set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
       }
