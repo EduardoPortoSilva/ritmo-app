@@ -1,4 +1,4 @@
 <resources>
-  <string name="ritmo_widget_name">Ritmo · Treinos de hoje</string>
-  <string name="ritmo_widget_description">Uma carinha acompanha os treinos programados: triste enquanto espera, feliz quando você conclui.</string>
+  <string name="ritmo_widget_name">Ritmo &#183; Treinos de hoje</string>
+  <string name="ritmo_widget_description">Faixa compacta com os treinos feitos e o primeiro treino pendente de hoje.</string>
 </resources>

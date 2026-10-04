@@ -5,7 +5,10 @@ import java.util.TimeZone
 
 data class ScheduledRoutine(val id: String, val name: String, val weekdays: List<Int>)
 data class Completion(val routineId: String, val finishedAt: Long)
-data class WidgetStatus(val mood: String, val title: String, val detail: String, val progress: String)
+data class WidgetStatus(val mood: String, val count: String, val summary: String, val narrowSummary: String = summary, val extra: String = "", val portraitSummary: String = summary)
+
+private fun pendingName(name: String, limit: Int): String =
+  if (name.length > limit) name.take(limit).trimEnd() + "\u2026" else name
 
 // Pure domain code: no Android context, database, or fixed UTC day boundaries.
 fun widgetStatus(
@@ -15,7 +18,7 @@ fun widgetStatus(
   zone: TimeZone = TimeZone.getDefault()
 ): WidgetStatus {
   if (routines.none { it.weekdays.isNotEmpty() }) {
-    return WidgetStatus("rest", "Vamos combinar?", "Escolha os dias das suas rotinas no app.", "Seu próximo passo começa aqui")
+    return WidgetStatus("rest", "\u2014", "Programe seus treinos", portraitSummary = "Sem treinos")
   }
   val start = Calendar.getInstance(zone).apply {
     timeInMillis = now
@@ -27,18 +30,13 @@ fun widgetStatus(
   val weekday = start.get(Calendar.DAY_OF_WEEK) - 1
   val end = (start.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, 1) }
   val today = routines.filter { weekday in it.weekdays }.distinctBy { it.id }
-  if (today.isEmpty()) {
-    return WidgetStatus("rest", "Hoje é descanso", "Nenhum treino programado para hoje.", "Recuperar também faz parte")
-  }
+  if (today.isEmpty()) return WidgetStatus("rest", "0/0", "Hoje \u00e9 descanso", portraitSummary = "Descanso")
   val completedIds = completions.filter {
     it.finishedAt >= start.timeInMillis && it.finishedAt < end.timeInMillis
   }.map { it.routineId }.toSet()
   val pending = today.filter { it.id !in completedIds }
-  val completed = today.size - pending.size
-  val progress = "$completed de ${today.size} " + if (today.size == 1) "treino feito" else "treinos feitos"
-  return if (pending.isEmpty()) {
-    WidgetStatus("happy", "Dia concluído!", today.joinToString(" · ") { it.name }, "$progress. Boa!")
-  } else {
-    WidgetStatus("sad", "Bora treinar?", pending.joinToString(" · ") { it.name }, "$progress hoje")
-  }
+  val count = "${today.size - pending.size}/${today.size}"
+  if (pending.isEmpty()) return WidgetStatus("happy", count, if (today.size == 1) "Treino conclu\u00eddo" else "Treinos conclu\u00eddos", portraitSummary = "Conclu\u00eddo")
+  val rest = pending.size - 1
+  return WidgetStatus("sad", count, pendingName(pending.first().name, 24), extra = if (rest > 0) "+$rest" else "", portraitSummary = pendingName(pending.first().name, 16))
 }

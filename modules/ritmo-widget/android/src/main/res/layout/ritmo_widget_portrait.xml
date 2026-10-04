@@ -1,0 +1,31 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+  android:orientation="vertical" android:gravity="center" android:paddingHorizontal="5dp"
+  android:paddingVertical="8dp" android:background="@drawable/ritmo_widget_background">
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:gravity="center" android:text="ritmo." android:textSize="11sp" android:textStyle="bold"
+    android:textColor="#243D32" android:maxLines="1" android:includeFontPadding="false" />
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_marginTop="4dp" android:gravity="center" android:text="TREINOS"
+    android:textSize="9sp" android:textColor="#647269" android:maxLines="1"
+    android:includeFontPadding="false" />
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_marginTop="8dp" android:gravity="center">
+    <ImageView android:id="@+id/widget_status_dot" android:layout_width="9dp"
+      android:layout_height="9dp" android:src="@drawable/ritmo_dot_pending"
+      android:contentDescription="Estado do treino" />
+    <TextView android:id="@+id/widget_count" android:layout_width="wrap_content"
+      android:layout_height="wrap_content" android:layout_marginStart="3dp" android:text="0/1"
+      android:textSize="17sp" android:textStyle="bold" android:textColor="#243D32"
+      android:includeFontPadding="false" />
+  </LinearLayout>
+  <TextView android:id="@+id/widget_summary" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center"
+    android:text="Treino A" android:textSize="11sp" android:textStyle="bold"
+    android:textColor="#243D32" android:maxLines="3" android:ellipsize="end"
+    android:includeFontPadding="false" />
+  <TextView android:id="@+id/widget_extra" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center"
+    android:text="+1" android:textSize="11sp" android:textStyle="bold"
+    android:textColor="#647269" android:includeFontPadding="false" android:visibility="gone" />
+</LinearLayout>

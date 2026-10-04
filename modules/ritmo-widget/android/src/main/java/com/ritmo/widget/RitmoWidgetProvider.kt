@@ -7,14 +7,18 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
+import android.view.View
 import android.widget.RemoteViews
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 class RitmoWidgetProvider : AppWidgetProvider() {
   override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = refresh(context)
+
+  override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, newOptions: Bundle?) {
+    super.onAppWidgetOptionsChanged(context, manager, id, newOptions)
+    refresh(context)
+  }
 
   override fun onReceive(context: Context, intent: Intent) {
     super.onReceive(context, intent)
@@ -42,34 +46,39 @@ class RitmoWidgetProvider : AppWidgetProvider() {
       if (ids.isEmpty()) return
       val raw = context.getSharedPreferences(WidgetStore.PREFS, 0).getString(WidgetStore.KEY, null)
       val status = try {
-        if (raw == null) WidgetStatus("rest", "Olá, vamos treinar?", "Abra o Ritmo para carregar suas rotinas.", "Seu treino, um dia de cada vez")
+        if (raw == null) WidgetStatus("rest", "\u2014", "Abra o Ritmo")
         else WidgetStore.parse(raw).let { (routines, completions) -> widgetStatus(routines, completions) }
       } catch (_: Exception) {
-        WidgetStatus("rest", "Abra o Ritmo", "Vamos atualizar seus treinos por aqui.", "Toque para continuar")
+        WidgetStatus("rest", "\u2014", "Abra o Ritmo")
       }
-      val views = RemoteViews(context.packageName, R.layout.ritmo_widget).apply {
-        setTextViewText(R.id.widget_date, SimpleDateFormat("EEE, dd/MM", Locale.forLanguageTag("pt-BR")).format(Date()))
-        setTextViewText(R.id.widget_title, status.title)
-        setTextViewText(R.id.widget_detail, status.detail)
-        setTextViewText(R.id.widget_progress, status.progress)
-        setImageViewResource(R.id.widget_face, when (status.mood) {
-          "happy" -> R.drawable.ritmo_face_happy
-          "sad" -> R.drawable.ritmo_face_sad
-          else -> R.drawable.ritmo_face_rest
-        })
-        setContentDescription(R.id.widget_face, when (status.mood) {
-          "happy" -> "Carinha feliz: treinos de hoje concluídos"
-          "sad" -> "Carinha triste: esperando os treinos de hoje"
-          else -> "Carinha tranquila"
-        })
-        context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { intent ->
-          setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(
-            context, 101, intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-          ))
+      ids.forEach { id ->
+        val options = manager.getAppWidgetOptions(id)
+        val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250)
+        val portrait = width < 180
+        val short = portrait && options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 54) < 120
+        val summary = if (portrait) status.portraitSummary else if (width < 300) status.narrowSummary else status.summary
+        val layout = if (portrait) R.layout.ritmo_widget_portrait else R.layout.ritmo_widget
+        val views = RemoteViews(context.packageName, layout).apply {
+          setTextViewText(R.id.widget_count, status.count)
+          setTextViewText(R.id.widget_summary, summary)
+          setViewVisibility(R.id.widget_summary, if (short) View.GONE else View.VISIBLE)
+          setTextViewText(R.id.widget_extra, status.extra)
+          setViewVisibility(R.id.widget_extra, if (short || status.extra.isEmpty()) View.GONE else View.VISIBLE)
+          setImageViewResource(R.id.widget_status_dot, when (status.mood) {
+            "happy" -> R.drawable.ritmo_dot_done
+            "sad" -> R.drawable.ritmo_dot_pending
+            else -> R.drawable.ritmo_dot_rest
+          })
+          setContentDescription(R.id.widget_root, "Treinos: ${status.count}. ${status.summary}${if (status.extra.isEmpty()) "" else " ${status.extra}"}. Toque para abrir o Ritmo.")
+          context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { intent ->
+            setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(
+              context, 101, intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+              PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            ))
+          }
         }
+        manager.updateAppWidget(id, views)
       }
-      manager.updateAppWidget(ids, views)
       // No exact-alarm permission or background JS. Android may defer this in
       // power saving; periodic app-widget updates also recompute the local day.
       val midnight = Calendar.getInstance().apply {

@@ -1252,12 +1252,11 @@ function Ritmo() {
                     <View style={s.card}>
                       <Text style={s.cardTitle}>Seu treino na tela inicial</Text>
                       <Text style={s.body}>
-                        Uma carinha esperando seu treino e um sorriso quando o dia estiver
-                        concluído.
+                        Uma faixa compacta mostra os treinos feitos e o próximo pendente.
                       </Text>
                       <Button
                         label="Adicionar widget"
-                        icon="smile"
+                        icon="grid"
                         secondary
                         onPress={async () => {
                           try {
