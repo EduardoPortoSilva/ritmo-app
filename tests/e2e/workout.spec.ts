@@ -113,9 +113,12 @@ test('repetir treino preenche cargas anteriores, permite editar e retoma sem mar
   await expect(page.getByLabel('Supino série 2 carga em kg', { exact: true })).toHaveValue('0');
   await expect(page.getByLabel('Supino série 3 carga em kg', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('Supino série 1 repetições', { exact: true })).toHaveValue('12');
+  await expect(page.getByText('Evolução da carga', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Um passo de cada vez', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Expandir gráfico de Supino', exact: true }).click();
   await expect(page.getByText('Evolução da carga', { exact: true })).toBeVisible();
-  await expect(page.getByText('Um passo de cada vez', { exact: true })).toHaveCount(0);
   await expect(page.getByTestId(/^load-record-/)).toHaveCount(1);
+  await page.getByRole('button', { name: 'Fechar gráfico', exact: true }).click();
   await expect(
     page.getByRole('checkbox', { name: 'Concluir Supino série 1', exact: true }),
   ).not.toBeChecked();
@@ -123,7 +126,7 @@ test('repetir treino preenche cargas anteriores, permite editar e retoma sem mar
   await page.reload();
   await page.getByRole('button', { name: 'Continuar treino', exact: true }).click();
   await expect(page.getByLabel('Supino série 1 carga em kg', { exact: true })).toHaveValue('15');
-  await expect(page.getByText('Evolução da carga', { exact: true })).toBeVisible();
+  await expect(page.getByText('Evolução da carga', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Continuar depois', exact: true }).click();
   await page.getByRole('tab', { name: 'Histórico' }).click();
   await page.getByRole('button', { name: /^Ver treino Rotina para repetir/ }).click();
@@ -169,6 +172,7 @@ test('gráfico usa datas equidistantes, maior carga concluída e histórico do e
   );
   await page.goto('/');
   await page.getByRole('button', { name: 'Continuar treino', exact: true }).click();
+  await page.getByRole('button', { name: 'Expandir gráfico de Supino', exact: true }).click();
   await expect(page.getByText('Evolução da carga', { exact: true })).toBeVisible();
   const points = page.getByTestId(/^load-record-/);
   await expect(points).toHaveCount(3);
@@ -198,7 +202,9 @@ test('gráfico usa datas equidistantes, maior carga concluída e histórico do e
   // 40 kg and 60 reps must share the same numeric vertical scale.
   expect((zeroY - loadY) / (zeroY - repsY)).toBeCloseTo(40 / 60, 2);
   await page.screenshot({ path: 'test-results/grafico-cargas.png' });
+  await page.getByRole('button', { name: 'Fechar gráfico', exact: true }).click();
   await page.getByRole('button', { name: 'Próximo', exact: true }).click();
+  await page.getByRole('button', { name: 'Expandir gráfico de Remada', exact: true }).click();
   await expect(points).toHaveCount(1);
   await expect(page.getByTestId(/^load-line-/)).toHaveCount(0);
   await expect(page.getByTestId(/^reps-line-/)).toHaveCount(0);
@@ -206,9 +212,17 @@ test('gráfico usa datas equidistantes, maior carga concluída e histórico do e
   await expect(page.getByTestId(/^total-load-point-/)).toHaveCount(1);
   await expect(page.getByTestId(/^reps-point-/)).toHaveCount(1);
   await expect(points.first()).toHaveAttribute('aria-label', /: 25 kg/);
+  await page.getByRole('button', { name: 'Fechar gráfico', exact: true }).click();
   await page.getByRole('button', { name: 'Próximo', exact: true }).click();
   await expect(points).toHaveCount(0);
   await expect(page.getByText('Um passo de cada vez', { exact: true })).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Expandir gráfico de Novo exercício', exact: true })
+    .click();
+  await expect(
+    page.getByText('Ainda não há séries concluídas deste exercício no histórico.'),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Fechar gráfico', exact: true }).click();
 });
 
 test('finalização registra peso corporal opcional e preenche o último peso salvo', async ({

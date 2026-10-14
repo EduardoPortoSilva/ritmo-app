@@ -53,3 +53,25 @@ test('descanso por série inicia, pausa, retoma e termina no treino', async ({ p
   ).toBeVisible();
   await page.getByRole('button', { name: 'Pausar descanso de Supino série 3' }).click();
 });
+
+test('aviso de descanso permite voltar ao exercício durante outro exercício', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Criar minha primeira rotina' }).click();
+  await page.getByLabel('Nome da rotina', { exact: true }).fill('Treino alternado');
+  await page.getByLabel('Nome do exercício 1', { exact: true }).fill('Supino');
+  await page.getByLabel('Descanso exercício 1 série 1', { exact: true }).fill('60');
+  await page.getByRole('button', { name: 'Adicionar exercício' }).click();
+  await page.getByLabel('Nome do exercício 2', { exact: true }).fill('Remada');
+  await page.getByRole('button', { name: 'Salvar rotina', exact: true }).click();
+  await page.getByRole('button', { name: 'Iniciar treino', exact: true }).click();
+  await page.getByRole('button', { name: 'Iniciar descanso de Supino série 1' }).click();
+  await page.getByRole('button', { name: 'Próximo' }).click();
+  await expect(page.getByTestId('rest-other-exercise')).toContainText('Supino');
+  await page.getByTestId('rest-other-exercise').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/descanso-voltar-exercicio.png' });
+  await page.getByRole('button', { name: 'Voltar ao exercício' }).click();
+  await expect(page.getByText('Exercício 1 de 2')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Pausar descanso de Supino série 1' }),
+  ).toBeVisible();
+});

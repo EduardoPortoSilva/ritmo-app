@@ -10,6 +10,25 @@ import {
 import { emptyDatabase, parseDatabase } from '../src/model.ts';
 import { muscleCatalog } from '../src/muscles.ts';
 
+test('observação livre do exercício é opcional na importação e respeita limite de texto', () => {
+  const input = {
+    formato: 'ritmo/1',
+    treinos: [
+      {
+        nome: 'A',
+        exercicios: [{ nome: 'Supino', repeticoes: [12], nota: '  Barra W\nMáquina  ' }],
+      },
+    ],
+  };
+  const parsed = parseBulkImport(JSON.stringify(input));
+  assert.equal(parsed.routines[0].exercises[0].note, 'Barra W\nMáquina');
+  for (const invalid of [null, 1, 'x'.repeat(301)]) {
+    const copy = structuredClone(input);
+    Object.assign(copy.treinos[0].exercicios[0], { nota: invalid });
+    assert.throws(() => parseBulkImport(JSON.stringify(copy)), /nota/);
+  }
+});
+
 test('importa divisão, cardio, dias, descansos e músculos mantendo IDs próprios', () => {
   const plan = parseBulkImport(bulkImportExample);
   assert.equal(plan.divisions[0].name, 'ABC');

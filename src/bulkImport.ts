@@ -1,4 +1,4 @@
-import {
+﻿import {
   cleanCardioRoutine,
   cardioRoutineError,
   newCardioRoutine,
@@ -8,6 +8,7 @@ import {
   cleanRoutine,
   newRoutine,
   routineError,
+  validExerciseNote,
   uid,
   type Database,
   type Routine,
@@ -65,7 +66,9 @@ const weekdays = (value: unknown, path: string): number[] => {
 
 function exercise(value: unknown, path: string) {
   const data = object(value, path);
-  fields(data, ['nome', 'repeticoes', 'descanso', 'musculos'], path);
+  fields(data, ['nome', 'repeticoes', 'descanso', 'musculos', 'nota'], path);
+  if (data.nota !== undefined && !validExerciseNote(data.nota))
+    throw new Error(`${path}.nota: use até 300 caracteres.`);
   const reps = list(data.repeticoes, `${path}.repeticoes`);
   if (reps.length < 1 || reps.length > 20)
     throw new Error(`${path}.repeticoes: inclua de 1 a 20 séries.`);
@@ -97,6 +100,7 @@ function exercise(value: unknown, path: string) {
   return {
     id: uid(),
     name: name(data.nome, `${path}.nome`),
+    ...(data.nota !== undefined ? { note: (data.nota as string).trim() } : {}),
     reps: reps.map((rep, index) => String(integer(rep, `${path}.repeticoes[${index}]`, 1, 999))),
     ...(rests ? { rests } : {}),
     ...(muscles ? { muscles } : {}),
@@ -289,7 +293,7 @@ export const bulkImportExample = JSON.stringify(
 
 export const bulkImportPrompt = `Gere exclusivamente um JSON válido para importar rotinas no app Ritmo. Não escreva explicações nem comentários. Use o formato exato abaixo, com "formato": "ritmo/1". Você pode omitir divisoes, treinos ou cardios quando vazios, mas inclua pelo menos uma rotina. Todos os nomes devem ter até 80 caracteres. Não invente chaves nem IDs musculares.
 
-Estrutura: divisoes é uma lista de {"nome": texto, "treinos": [treino...]}; treinos é uma lista de treinos avulsos; cardios é uma lista de cardios. Treino: {"nome": texto, "dias": ["seg","ter","qua","qui","sex","sab","dom"], "nota": texto opcional, "exercicios": [exercicio...]}. Dias são opcionais; ausência ou [] significa sem dia fixo. Exercício: {"nome": texto, "repeticoes": [inteiros de 1 a 999], "descanso": inteiro de 0 a 3600 segundos para todas as séries OU lista de um valor por série, "musculos": [{"id": ID do catálogo, "papel": "principal" ou "secundario"}]}. Descanso e músculos são opcionais. Cada exercício tem 1 a 20 séries. Cardio: {"nome": texto, "dias": lista opcional, "etapas": [{"minutos": número de 0.1 a 60, "velocidade": número de 0 a 40 em km/h}]}. Máximo 50 etapas e 4 horas por cardio. Use números JSON, não números entre aspas. Use nomes de campos sem acentos exatamente como no exemplo. Não inclua cargas/pesos, pois são registrados durante a execução. Se não souber o músculo específico, use o ID do grupo; se não souber o grupo, omita musculos. IDs musculares válidos (ID: nome):
+Estrutura: divisoes é uma lista de {"nome": texto, "treinos": [treino...]}; treinos é uma lista de treinos avulsos; cardios é uma lista de cardios. Treino: {"nome": texto, "dias": ["seg","ter","qua","qui","sex","sab","dom"], "nota": texto opcional, "exercicios": [exercicio...]}. Dias são opcionais; ausência ou [] significa sem dia fixo. Exercício: {"nome": texto, "repeticoes": [inteiros de 1 a 999], "descanso": inteiro de 0 a 3600 segundos para todas as séries OU lista de um valor por série, "musculos": [{"id": ID do catálogo, "papel": "principal" ou "secundario"}]}. Descanso, músculos e nota são opcionais. Exercício também aceita "nota": texto livre de até 300 caracteres, como Barra W ou máquina. Cada exercício tem 1 a 20 séries. Cardio: {"nome": texto, "dias": lista opcional, "etapas": [{"minutos": número de 0.1 a 60, "velocidade": número de 0 a 40 em km/h}]}. Máximo 50 etapas e 4 horas por cardio. Use números JSON, não números entre aspas. Use nomes de campos sem acentos exatamente como no exemplo. Não inclua cargas/pesos, pois são registrados durante a execução. Se não souber o músculo específico, use o ID do grupo; se não souber o grupo, omita musculos. IDs musculares válidos (ID: nome):
 ${muscleCatalog.map((node) => `${node.id}: ${node.name}`).join('\n')}
 
 Exemplo completo:

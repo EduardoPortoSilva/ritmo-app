@@ -6,8 +6,9 @@ import { startBackgroundRestCue, stopBackgroundRestCue } from './restCue';
 import {
   allSets,
   duration,
-  exerciseLoadHistory,
-  exerciseTotalLoadHistory,
+  previousRoutineWorkouts,
+  suggestsLoadIncrease,
+  suggestsLoadDecrease,
   formatDate,
   formatNumber,
   newExercise,
@@ -22,10 +23,18 @@ import {
   volume,
   type Routine,
   type Workout,
+  type LoggedExercise,
 } from './model';
 import { Button, Field, Icon, IconButton, Metric, PageHeader, SectionTitle, s } from './ui';
+import type { EffortRecord } from './effort';
 import { colors as c } from './theme';
-import { LoadHistoryChart } from './LoadHistoryChart';
+import { WorkoutHistoryModal } from './WorkoutHistoryModal';
+import { ExerciseNoteModal } from './ExerciseNoteModal';
+import {
+  AutomaticLoadHint,
+  ExerciseFeedbackControls,
+  ExerciseFeedbackStatus,
+} from './ExerciseFeedback';
 import { MusclePicker, MuscleLinksSummary } from './MusclePicker';
 import { ExerciseMuscleModal } from './ExerciseMuscleModal';
 import {
@@ -87,19 +96,34 @@ export function RoutineCard({
     </View>
   );
 }
-export function HistoryCard({ workout, onPress }: { workout: Workout; onPress: () => void }) {
+export function HistoryCard({
+  workout,
+  effort,
+  onPress,
+}: {
+  workout: Workout;
+  effort?: EffortRecord;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Ver treino ${workout.name}, ${formatDate(workout.finishedAt!)}`}
+      testID={'history-workout-' + workout.id}
       onPress={onPress}
-      style={s.historyCard}
+      style={[s.historyCard, effort && { borderLeftWidth: 5, borderLeftColor: effort.color }]}
     >
       <View style={s.historyIcon}>
         <Icon name="check" color={c.dark} />
       </View>
       <View style={{ flex: 1, gap: 5 }}>
         <Text style={s.cardTitle}>{workout.name}</Text>
+        {effort && (
+          <Text style={[s.small, { color: effort.color, fontWeight: '700' }]}>
+            {effort.label !== workout.name ? effort.label + ' · ' : ''}
+            {effort.percent === null ? 'Sem referência de carga' : effort.percent + '% do máximo'}
+          </Text>
+        )}
         <Text style={s.small}>
           {formatDate(workout.finishedAt!)} · {allSets(workout).filter((set) => set.done).length}{' '}
           séries · {formatNumber(volume(workout))} kg
@@ -245,6 +269,13 @@ export function RoutineFields({
             value={exercise.name}
             placeholder="Ex.: Supino reto"
             onChangeText={(name) => changeExercise(exercise.id, { name })}
+          />
+          <Field
+            label={`Observações do exercício ${index + 1}`}
+            value={exercise.note ?? ''}
+            multiline
+            placeholder="Ex.: Barra W, máquina, ajuste do banco…"
+            onChangeText={(note) => changeExercise(exercise.id, { note })}
           />
           <View style={s.sectionHeader}>
             <Text style={s.fieldLabel}>Metas por série</Text>
@@ -439,6 +470,7 @@ export function RoutineDetail({
               />
             </View>
             <MuscleLinksSummary links={exercise.muscles} />
+            {!!exercise.note && <Text style={s.body}>Observações: {exercise.note}</Text>}
             {sameTargets && (
               <>
                 <Text style={s.fieldLabel}>
@@ -497,6 +529,7 @@ export function WorkoutScreen({
   history,
   onBack,
   onChange,
+  onExerciseNote,
   onFinish,
   onCancel,
   onError,
@@ -505,11 +538,14 @@ export function WorkoutScreen({
   history: readonly Workout[];
   onBack: () => void;
   onChange: (workout: Workout) => void;
+  onExerciseNote: (exerciseId: string, note: string) => void;
   onFinish: () => void;
   onCancel: () => void;
   onError: (message: string) => void;
 }) {
   const [exerciseIndex, setExerciseIndex] = useState(0);
+  const [chartOpen, setChartOpen] = useState(false);
+  const [noteEditorOpen, setNoteEditorOpen] = useState(false);
   const [musclePreviewId, setMusclePreviewId] = useState<string | null>(null);
   const [restTimer, setRestTimer] = useState<RestTimer | null>(null);
   const [now, setNow] = useState(Date.now);
@@ -518,7 +554,10 @@ export function WorkoutScreen({
   const nativeCueStarted = useRef(false);
   const scroll = useRef<ScrollView>(null);
   const exercise = workout.exercises[exerciseIndex];
-  const loadHistory = exercise ? exerciseLoadHistory(history, workout.routineId, exercise.id) : [];
+  const previousWorkouts = previousRoutineWorkouts(history, workout.routineId);
+  const previousExercise = previousWorkouts[0]?.exercises.find((item) => item.id === exercise?.id);
+  const suggestIncrease = exercise ? suggestsLoadIncrease(exercise, previousWorkouts) : false;
+  const suggestDecrease = exercise ? suggestsLoadDecrease(exercise, previousWorkouts) : false;
   const sets = allSets(workout);
   const done = sets.filter((set) => set.done).length;
   const restLeft = restTimer ? restRemainingMs(restTimer, now) : 0;
@@ -584,6 +623,8 @@ export function WorkoutScreen({
   }
   function navigateExercise(index: number) {
     Keyboard.dismiss();
+    setChartOpen(false);
+    setNoteEditorOpen(false);
     setExerciseIndex(index);
     scroll.current?.scrollTo({ y: 0, animated: false });
   }
@@ -601,6 +642,14 @@ export function WorkoutScreen({
       ),
     });
   }
+  function patchExercise(changes: Partial<LoggedExercise>) {
+    onChange({
+      ...workout,
+      exercises: workout.exercises.map((item) =>
+        item.id === exercise.id ? { ...item, ...changes } : item,
+      ),
+    });
+  }
   return (
     <ScrollView ref={scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       <PageHeader
@@ -608,40 +657,38 @@ export function WorkoutScreen({
         subtitle="Seu treino está em andamento. Vamos nessa."
         onBack={onBack}
       />
-      {exercise && loadHistory.length > 0 ? (
-        <LoadHistoryChart
-          key={`chart-${exercise.id}`}
-          records={loadHistory}
-          totals={exerciseTotalLoadHistory(history, workout.routineId, exercise.id)}
-          exerciseName={exercise.name}
-        />
-      ) : (
-        <View style={s.progressCard}>
-          <View style={s.sectionHeader}>
-            <Text style={s.fieldLabel}>Um passo de cada vez</Text>
-            <Text style={s.link}>
-              {done}/{sets.length} séries
-            </Text>
-          </View>
-          <View style={s.progressTrack}>
-            <View
-              style={[
-                s.progressFill,
-                { width: `${sets.length ? (done / sets.length) * 100 : 0}%` },
-              ]}
-            />
-          </View>
-          <Text style={s.small}>Preencha as repetições e a carga, depois marque ✓.</Text>
+      <View style={{ gap: 8 }}>
+        <View style={s.sectionHeader}>
+          <Text style={s.fieldLabel}>Um passo de cada vez</Text>
+          <Text style={s.link}>
+            {done}/{sets.length} séries
+          </Text>
         </View>
-      )}
+        <View style={s.progressTrack}>
+          <View
+            style={[s.progressFill, { width: `${sets.length ? (done / sets.length) * 100 : 0}%` }]}
+          />
+        </View>
+      </View>
       {restTimer && restTimer.exerciseId !== exercise?.id && restLeft > 0 && (
         <View style={s.noteCard} testID="rest-other-exercise">
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, gap: 8 }}>
             <Text style={s.fieldLabel}>Descanso em andamento</Text>
             <Text style={s.small}>
               {restingExercise?.name} · série {(restingSetIndex ?? 0) + 1} ·{' '}
               {formatRestRemaining(restLeft)} restantes
             </Text>
+            <Button
+              label="Voltar ao exercício"
+              secondary
+              icon="arrow-left"
+              onPress={() => {
+                const index = workout.exercises.findIndex(
+                  (item) => item.id === restTimer.exerciseId,
+                );
+                if (index >= 0) navigateExercise(index);
+              }}
+            />
           </View>
           <IconButton
             name={restTimer.runningSince === null ? 'play' : 'pause'}
@@ -670,11 +717,36 @@ export function WorkoutScreen({
               </Text>
             </View>
             <IconButton
+              name="bar-chart-2"
+              label={`Expandir gráfico de ${exercise.name}`}
+              onPress={() => {
+                Keyboard.dismiss();
+                setChartOpen(true);
+              }}
+            />
+            <IconButton
               name="help-circle"
               label={`Ver mapa muscular de ${exercise.name}`}
               onPress={() => setMusclePreviewId(exercise.id)}
             />
           </View>
+          <ExerciseFeedbackStatus exercise={previousExercise} previous />
+          <View style={s.sectionHeader} testID="exercise-note-summary">
+            <Text style={[s.small, { flex: 1 }]}>
+              {exercise.note?.trim() ? `Observações: ${exercise.note}` : 'Adicionar observação'}
+            </Text>
+            <IconButton
+              name="edit-2"
+              label={`Editar observações de ${exercise.name}`}
+              onPress={() => {
+                Keyboard.dismiss();
+                setNoteEditorOpen(true);
+              }}
+            />
+          </View>
+          {(suggestDecrease || suggestIncrease) && (
+            <AutomaticLoadHint adjustment={suggestDecrease ? 'decrease' : 'increase'} />
+          )}
           <View style={s.setRow}>
             <Text style={[s.tableHeading, { width: 36 }]}>SÉRIE</Text>
             <Text style={[s.tableHeading, { flex: 1 }]}>REPS</Text>
@@ -683,8 +755,10 @@ export function WorkoutScreen({
           </View>
           {exercise.sets.map((set, i) => (
             <View key={set.id}>
-              <View style={[s.setRow, set.done && s.completedRow]}>
-                <Text style={[s.setIndex, { width: 36 }]}>{String(i + 1).padStart(2, '0')}</Text>
+              <View style={[s.setRow, { alignItems: 'flex-start' }, set.done && s.completedRow]}>
+                <Text style={[s.setIndex, { width: 36, paddingTop: 14 }]}>
+                  {String(i + 1).padStart(2, '0')}
+                </Text>
                 <View style={{ flex: 1 }}>
                   <TextInput
                     accessibilityLabel={`${exercise.name} série ${i + 1} repetições`}
@@ -694,7 +768,6 @@ export function WorkoutScreen({
                     onChangeText={(reps) => patch(exercise.id, set.id, { reps, done: false })}
                     style={s.setInput}
                   />
-                  <Text style={s.target}>meta: {set.target}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <TextInput
@@ -707,7 +780,6 @@ export function WorkoutScreen({
                     onChangeText={(weight) => patch(exercise.id, set.id, { weight, done: false })}
                     style={s.setInput}
                   />
-                  <Text style={s.target}>kg</Text>
                 </View>
                 <Pressable
                   accessibilityRole="checkbox"
@@ -727,6 +799,20 @@ export function WorkoutScreen({
                 >
                   <Icon name="check" color={set.done ? c.lime : c.muted} size={19} />
                 </Pressable>
+              </View>
+              <View
+                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingLeft: 48 }}
+                testID={`set-comparison-${i + 1}`}
+              >
+                <Text style={[s.small, { fontSize: 11 }]}>meta: {set.target}</Text>
+                <Text style={[s.small, { fontSize: 11 }]}>
+                  {(() => {
+                    const last = previousExercise?.sets[i];
+                    return last?.done && validReps(last.reps) && validWeight(last.weight)
+                      ? `Última: ${last.reps} reps × ${formatNumber(Number(last.weight.replace(',', '.')))} kg`
+                      : 'Última: sem série concluída';
+                  })()}
+                </Text>
               </View>
               <View style={[s.row, { justifyContent: 'space-between', paddingTop: 5 }]}>
                 <View style={{ flex: 1 }}>
@@ -791,6 +877,7 @@ export function WorkoutScreen({
           </View>
         </View>
       )}
+      {exercise && <ExerciseFeedbackControls exercise={exercise} onChange={patchExercise} />}
       <Text style={s.small}>
         Sem carga externa? Registre 0 kg. Alterar uma série desmarca sua conclusão para você
         conferir novamente.
@@ -804,6 +891,23 @@ export function WorkoutScreen({
         exercise={workout.exercises.find((item) => item.id === musclePreviewId) ?? null}
         onClose={() => setMusclePreviewId(null)}
       />
+      <WorkoutHistoryModal
+        exercise={chartOpen ? exercise : null}
+        history={history}
+        routineId={workout.routineId}
+        onClose={() => setChartOpen(false)}
+      />
+      {noteEditorOpen && exercise && (
+        <ExerciseNoteModal
+          key={`note-${exercise.id}`}
+          exercise={exercise}
+          onClose={() => setNoteEditorOpen(false)}
+          onSave={(note) => {
+            onExerciseNote(exercise.id, note);
+            setNoteEditorOpen(false);
+          }}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -878,10 +982,12 @@ export function FinishWorkoutScreen({
 
 export function WorkoutDetail({
   workout,
+  effort,
   onBack,
   onDelete,
 }: {
   workout: Workout;
+  effort?: EffortRecord;
   onBack: () => void;
   onDelete: () => void;
 }) {
@@ -893,6 +999,21 @@ export function WorkoutDetail({
         subtitle={`${new Date(workout.finishedAt!).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}`}
         onBack={onBack}
       />
+      {effort && (
+        <View style={[s.noteCard, { borderLeftWidth: 5, borderLeftColor: effort.color }]}>
+          <View style={{ gap: 4 }}>
+            <Text style={s.fieldLabel}>{effort.label}</Text>
+            <Text style={s.body}>
+              {effort.percent === null
+                ? 'Sem referência de carga'
+                : effort.percent + '% do maior esforço desta fase'}
+            </Text>
+            <Text style={s.small}>
+              {formatNumber(effort.volume)} de {formatNumber(effort.maxVolume)} kg·repetições
+            </Text>
+          </View>
+        </View>
+      )}
       {workout.bodyWeight !== undefined && (
         <View style={s.card}>
           <Text style={s.small}>Peso corporal</Text>
@@ -921,6 +1042,8 @@ export function WorkoutDetail({
               onPress={() => setMusclePreviewId(exercise.id)}
             />
           </View>
+          <ExerciseFeedbackStatus exercise={exercise} />
+          {!!exercise.note && <Text style={s.body}>Observações: {exercise.note}</Text>}
           {exercise.sets.map((set, i) => (
             <View key={set.id}>
               <View style={s.detailRow}>

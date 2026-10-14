@@ -75,12 +75,14 @@ test('gráficos independentes, total por exercício e consulta de rotinas exclu�
   await page.goto('/');
   await page.getByRole('tab', { name: 'Gráficos', exact: true }).click();
   await expect(page.getByText('Seu progresso começa aqui')).toBeVisible();
+  await expect(page.getByTestId('body-weight-empty')).toBeVisible();
   const routine = newRoutine();
   routine.name = 'A';
   routine.exercises[0].name = 'Supino';
   routine.exercises[0].reps = ['12', '10', '8'];
   const workout = startWorkout(routine);
   workout.id = 'first';
+  workout.bodyWeight = '75';
   workout.finishedAt = '2026-09-26T12:00:00Z';
   workout.exercises[0].sets.forEach((set, i) => {
     set.done = true;
@@ -104,6 +106,9 @@ test('gráficos independentes, total por exercício e consulta de rotinas exclu�
   });
   await page.reload();
   await page.getByRole('tab', { name: 'Gráficos', exact: true }).click();
+  await expect(page.getByTestId('body-weight-chart')).toBeVisible();
+  await page.getByTestId('body-weight-chart').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/graficos-peso-padrao.png' });
   await page.getByRole('radio', { name: 'Supino · A', exact: true }).click();
   await expect(page.getByTestId('total-load-record-first')).toHaveAttribute(
     'aria-label',

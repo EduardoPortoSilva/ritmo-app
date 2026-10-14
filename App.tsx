@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -32,6 +32,7 @@ import {
   routineDays,
   routinesForDate,
   startWorkout,
+  setActiveExerciseNote,
   uid,
   volume,
   workoutError,
@@ -42,6 +43,7 @@ import {
 } from './src/model';
 import { loadDatabase, restoreDatabase, saveDatabase } from './src/storage';
 import { BodyWeightChart } from './src/LoadHistoryChart';
+import { effortHistory } from './src/effort';
 import { DivisionEditor } from './src/DivisionEditor';
 import { ChartsScreen } from './src/ChartsScreen';
 import { CoverageScreen, type CoverageScope } from './src/CoverageScreen';
@@ -595,6 +597,11 @@ function Ritmo() {
         })),
     });
   }
+  const effort = useMemo(() => effortHistory(db.workouts), [db.workouts]);
+  const effortByWorkoutId = useMemo(
+    () => new Map(effort.records.map((record) => [record.workoutId, record])),
+    [effort],
+  );
   const supplements = db.supplements ?? [];
   const takenToday = supplements.filter((item) => item.takenOn.includes(dayKey(today))).length;
   const visibleRoutines = activeRoutines(db);
@@ -870,7 +877,7 @@ function Ritmo() {
               }
             />
           ) : route.page === 'charts' ? (
-            <ChartsScreen history={db.workouts} />
+            <ChartsScreen history={db.workouts} effort={effort} />
           ) : route.page === 'division-editor' ? (
             <DivisionEditor
               initial={route.division}
@@ -941,6 +948,9 @@ function Ritmo() {
               history={db.workouts}
               onBack={back}
               onChange={(active) => update((previous) => ({ ...previous, active }))}
+              onExerciseNote={(exerciseId, note) =>
+                update((previous) => setActiveExerciseNote(previous, exerciseId, note))
+              }
               onFinish={complete}
               onError={(message) => setDialog({ title: 'Confira a série', message })}
               onCancel={() =>
@@ -972,6 +982,7 @@ function Ritmo() {
           ) : route.page === 'detail' ? (
             <WorkoutDetail
               workout={route.workout}
+              effort={effortByWorkoutId.get(route.workout.id)}
               onBack={back}
               onDelete={() =>
                 setDialog({
@@ -1253,6 +1264,7 @@ function Ritmo() {
                   ) : db.workouts.length ? (
                     <HistoryCard
                       workout={db.workouts[0]}
+                      effort={effortByWorkoutId.get(db.workouts[0].id)}
                       onPress={() => setRoute({ page: 'detail', workout: db.workouts[0] })}
                     />
                   ) : (
@@ -1637,6 +1649,7 @@ function Ritmo() {
                           <HistoryCard
                             key={item.id}
                             workout={item.workout}
+                            effort={effortByWorkoutId.get(item.workout.id)}
                             onPress={() => setRoute({ page: 'detail', workout: item.workout! })}
                           />
                         ) : 'session' in item && item.session ? (

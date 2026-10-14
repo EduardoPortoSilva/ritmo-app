@@ -82,14 +82,21 @@ export function LoadHistoryChart({
   );
 }
 
-export function BodyWeightChart({ history }: { history: readonly Workout[] }) {
+export function BodyWeightChart({
+  history,
+  emptyMessage,
+}: {
+  history: readonly Workout[];
+  emptyMessage?: string;
+}) {
   const records = bodyWeightHistory(history);
   if (!records.length)
     return (
       <View style={s.progressCard} testID="body-weight-empty">
         <Text style={s.fieldLabel}>Peso ao longo do tempo</Text>
         <Text style={s.small}>
-          Registre seu peso ao finalizar um treino para acompanhar seu histórico aqui.
+          {emptyMessage ??
+            'Registre seu peso ao finalizar um treino para acompanhar seu histórico aqui.'}
         </Text>
       </View>
     );
@@ -109,12 +116,15 @@ function HistoryChart({
   const scroll = useRef<ScrollView>(null);
   const points = records;
   const minimum = bodyWeight
-    ? Math.max(0, Math.floor(Math.min(...points.map((p) => p.weight)) - 1))
+    ? Math.max(
+        0,
+        Math.floor(points.reduce((min, point) => Math.min(min, point.weight), Infinity)) - 1,
+      )
     : 0;
   const maximum = bodyWeight
-    ? Math.ceil(Math.max(...points.map((p) => p.weight)) + 1)
-    : Math.max(1, ...points.flatMap((point) => [point.weight, point.reps ?? 0]));
-  const totalMaximum = Math.max(1, ...points.map((point) => point.total ?? 0));
+    ? Math.ceil(points.reduce((max, point) => Math.max(max, point.weight), 0)) + 1
+    : points.reduce((max, point) => Math.max(max, point.weight, point.reps ?? 0), 1);
+  const totalMaximum = points.reduce((max, point) => Math.max(max, point.total ?? 0), 1);
   const heightFor = (value: number, metric = 'weight') =>
     metric === 'total'
       ? (value / totalMaximum) * plotHeight

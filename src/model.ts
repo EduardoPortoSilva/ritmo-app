@@ -12,6 +12,7 @@ import {
 export type PlannedExercise = {
   id: string;
   name: string;
+  note?: string;
   reps: string[];
   rests?: string[];
   muscles?: MuscleLink[];
@@ -38,6 +39,23 @@ export type LoggedSet = {
   done: boolean;
   rest?: string;
 };
+export const loadAdjustments = {
+  increase: 'Aumentar carga',
+  maintain: 'Manter carga',
+  decrease: 'Diminuir carga',
+} as const;
+export type LoadAdjustment = keyof typeof loadAdjustments;
+export type LoggedExercise = {
+  id: string;
+  name: string;
+  note?: string;
+  sets: LoggedSet[];
+  muscles?: MuscleLink[];
+  loadAdjustment?: LoadAdjustment;
+  // Legacy persisted name: this flag now covers any impediment, including fatigue or cramps.
+  cramp?: boolean;
+  externalImpediment?: boolean;
+};
 export type Workout = {
   id: string;
   routineId: string;
@@ -45,7 +63,7 @@ export type Workout = {
   startedAt: string;
   finishedAt?: string;
   bodyWeight?: string;
-  exercises: { id: string; name: string; sets: LoggedSet[]; muscles?: MuscleLink[] }[];
+  exercises: LoggedExercise[];
 };
 export type Database = {
   version: 1;
@@ -107,6 +125,8 @@ export const validReps = (value: string) =>
 // Empty means unspecified; zero explicitly means no rest.
 export const validRest = (value: string) =>
   value.trim() === '' || (/^\d+$/.test(value.trim()) && Number(value) <= 3600);
+export const validExerciseNote = (value: unknown): value is string =>
+  typeof value === 'string' && value.length <= 300;
 export const restLabel = (value?: string) =>
   value === undefined || value.trim() === ''
     ? 'Descanso não definido'
@@ -119,6 +139,7 @@ export const routineDraftKey = (routine: Routine) =>
     exercises: routine.exercises.map((exercise) => ({
       id: exercise.id,
       name: exercise.name,
+      note: exercise.note ?? '',
       muscles: muscleLinksKey(exercise.muscles),
       reps: exercise.reps,
       rests: exercise.reps.map((_, i) => exercise.rests?.[i] ?? ''),
@@ -159,6 +180,8 @@ export function routineError(routine: Routine): string | null {
   if (!routine.name.trim()) return 'Dê um nome para a rotina.';
   if (!routine.exercises.length) return 'Adicione pelo menos um exercício.';
   for (const [index, exercise] of routine.exercises.entries()) {
+    if (exercise.note !== undefined && !validExerciseNote(exercise.note))
+      return `Use até 300 caracteres nas observações de ${exercise.name}.`;
     if (exercise.muscles !== undefined && !validMuscleLinks(exercise.muscles))
       return `Confira os vínculos musculares do exercício ${index + 1}.`;
     if (!exercise.name.trim()) return `Informe o nome do exercício ${index + 1}.`;
@@ -183,6 +206,7 @@ export const cleanRoutine = (routine: Routine): Routine => ({
   exercises: routine.exercises.map((exercise) => ({
     ...exercise,
     name: exercise.name.trim(),
+    ...(exercise.note !== undefined ? { note: exercise.note.trim() } : {}),
     reps: exercise.reps.map((rep) => String(Number(rep))),
     rests: exercise.rests?.map((rest) => (rest.trim() === '' ? '' : String(Number(rest)))),
   })),
@@ -221,14 +245,84 @@ export function saveDivision(db: Database, division: DivisionDraft): Database {
   others.splice(first < 0 ? others.length : first, 0, ...routines);
   return { ...db, routines: others };
 }
+// Keep routine IDs and set positions as the history identity; never mutate history order.
+export function previousRoutineWorkouts(history: readonly Workout[], routineId: string): Workout[] {
+  return history
+    .filter(
+      (workout) =>
+        workout.routineId === routineId &&
+        workout.finishedAt &&
+        Number.isFinite(Date.parse(workout.finishedAt)),
+    )
+    .slice()
+    .sort((a, b) => Date.parse(b.finishedAt!) - Date.parse(a.finishedAt!));
+}
+export function suggestsLoadIncrease(
+  exercise: LoggedExercise,
+  previous: readonly Workout[],
+): boolean {
+  const recent = previous
+    .slice(0, 2)
+    .map((workout) => workout.exercises.find((item) => item.id === exercise.id));
+  if (recent.length < 2 || !recent[0] || !recent[1] || !exercise.sets.length) return false;
+  if (recent.some((item) => item!.externalImpediment)) return false;
+  if (
+    recent[0].cramp ||
+    recent[0].loadAdjustment === 'maintain' ||
+    recent[0].loadAdjustment === 'decrease'
+  )
+    return false;
+  if (recent.some((item) => item!.sets.length !== exercise.sets.length)) return false;
+  return exercise.sets.every((set, index) => {
+    const a = recent[0]!.sets[index];
+    const b = recent[1]!.sets[index];
+    return (
+      validReps(set.target) &&
+      [a, b].every(
+        (item) =>
+          item.done &&
+          validReps(item.reps) &&
+          validReps(item.target) &&
+          validWeight(item.weight) &&
+          Number(item.target) === Number(set.target) &&
+          Number(item.reps) >= Number(set.target),
+      ) &&
+      numberValue(a.weight) === numberValue(b.weight)
+    );
+  });
+}
+export function suggestsLoadDecrease(
+  exercise: LoggedExercise,
+  previous: readonly Workout[],
+): boolean {
+  const recent = previous
+    .slice(0, 2)
+    .map((workout) => workout.exercises.find((item) => item.id === exercise.id));
+  if (recent.length < 2 || !recent[0] || !recent[1] || !exercise.sets.length) return false;
+  if (recent.some((item) => item!.externalImpediment)) return false;
+  return recent.every((item) => {
+    if (
+      item!.sets.length !== exercise.sets.length ||
+      item!.sets.some(
+        (set, index) =>
+          !validReps(set.target) ||
+          !validReps(exercise.sets[index].target) ||
+          Number(set.target) !== Number(exercise.sets[index].target),
+      )
+    )
+      return false;
+    const belowHalf = item!.sets.filter(
+      (set) =>
+        set.done &&
+        validReps(set.reps) &&
+        validWeight(set.weight) &&
+        Number(set.reps) < Number(set.target) / 2,
+    ).length;
+    return belowHalf > exercise.sets.length / 2;
+  });
+}
 export function startWorkout(routine: Routine, history: readonly Workout[] = []): Workout {
-  // Use the latest saved session of this routine, without changing history order.
-  const previous = history.reduce<Workout | undefined>((latest, workout) => {
-    if (workout.routineId !== routine.id || !workout.finishedAt) return latest;
-    const finished = Date.parse(workout.finishedAt);
-    if (!Number.isFinite(finished)) return latest;
-    return !latest || finished > Date.parse(latest.finishedAt!) ? workout : latest;
-  }, undefined);
+  const previous = previousRoutineWorkouts(history, routine.id)[0];
   const previousExercises = new Map(previous?.exercises.map((exercise) => [exercise.id, exercise]));
 
   return {
@@ -239,6 +333,7 @@ export function startWorkout(routine: Routine, history: readonly Workout[] = [])
     exercises: routine.exercises.map((exercise) => ({
       id: exercise.id,
       name: exercise.name,
+      ...(exercise.note ? { note: exercise.note } : {}),
       ...(exercise.muscles ? { muscles: exercise.muscles.map((link) => ({ ...link })) } : {}),
       sets: exercise.reps.map((target, index) => {
         const previousSet = previousExercises.get(exercise.id)?.sets[index];
@@ -255,6 +350,37 @@ export function startWorkout(routine: Routine, history: readonly Workout[] = [])
   };
 }
 export const allSets = (workout: Workout) => workout.exercises.flatMap((exercise) => exercise.sets);
+export function setActiveExerciseNote(
+  database: Database,
+  exerciseId: string,
+  note: string,
+): Database {
+  if (!validExerciseNote(note))
+    throw new Error('Use até 300 caracteres nas observações do exercício.');
+  const active = database.active;
+  if (!active?.exercises.some((exercise) => exercise.id === exerciseId)) return database;
+  return {
+    ...database,
+    active: {
+      ...active,
+      exercises: active.exercises.map((exercise) =>
+        exercise.id === exerciseId ? { ...exercise, note } : exercise,
+      ),
+    },
+    routines: database.routines.map((routine) =>
+      routine.id === active.routineId &&
+      routine.exercises.some((exercise) => exercise.id === exerciseId)
+        ? {
+            ...routine,
+            updatedAt: new Date().toISOString(),
+            exercises: routine.exercises.map((exercise) =>
+              exercise.id === exerciseId ? { ...exercise, note } : exercise,
+            ),
+          }
+        : routine,
+    ),
+  };
+}
 export type ExerciseLoadRecord = {
   workoutId: string;
   date: string;
@@ -409,6 +535,7 @@ export function parseDatabase(raw: string): Database {
         e &&
         string(e.id) &&
         string(e.name) &&
+        (e.note === undefined || validExerciseNote(e.note)) &&
         (e.muscles === undefined || validMuscleLinks(e.muscles)) &&
         Array.isArray(e.reps) &&
         e.reps.every(string) &&
@@ -431,7 +558,13 @@ export function parseDatabase(raw: string): Database {
         e &&
         string(e.id) &&
         string(e.name) &&
+        (e.note === undefined || validExerciseNote(e.note)) &&
         (e.muscles === undefined || validMuscleLinks(e.muscles)) &&
+        (e.loadAdjustment === undefined ||
+          (typeof e.loadAdjustment === 'string' &&
+            Object.hasOwn(loadAdjustments, e.loadAdjustment))) &&
+        (e.cramp === undefined || typeof e.cramp === 'boolean') &&
+        (e.externalImpediment === undefined || typeof e.externalImpediment === 'boolean') &&
         Array.isArray(e.sets) &&
         e.sets.every(
           (s: any) =>
