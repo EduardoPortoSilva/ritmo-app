@@ -60,6 +60,7 @@ import { BackupScreen } from './src/BackupScreen';
 import type { BackupPreview } from './src/backup';
 import { shouldDeferSupplementLink } from './src/navigation';
 import { RoutineSetsScreen } from './src/RoutineSetsScreen';
+import { RoutineActions, routineActionFonts } from './src/RoutineActions';
 import {
   activeRoutines,
   activateRoutineSet,
@@ -144,6 +145,7 @@ type Dialog = {
   title: string;
   message: string;
   label?: string;
+  cancelLabel?: string;
   danger?: boolean;
   onConfirm?: () => void;
 };
@@ -156,7 +158,7 @@ export default function App() {
   );
 }
 function Ritmo() {
-  const [fontsLoaded, fontError] = useFonts(Feather.font);
+  const [fontsLoaded, fontError] = useFonts({ ...Feather.font, ...routineActionFonts });
   const [db, setDb] = useState<Database>(emptyDatabase);
   const dbRef = useRef(db);
   const [ready, setReady] = useState(false);
@@ -1473,61 +1475,34 @@ function Ritmo() {
                         treinos programados. Treinos em andamento, cardios e histórico continuam
                         disponíveis.
                       </Text>
-                      <Button
-                        label="Retomar treinos de força"
-                        icon="play"
-                        onPress={() => {
-                          update((previous) => setStrengthPaused(previous, false));
-                          setToast('Treinos de força retomados.');
-                        }}
-                      />
-                    </View>
-                  ) : visibleRoutines.length ? (
-                    <View style={{ gap: 6 }}>
-                      <Button
-                        label="Pausar treinos de força"
-                        secondary
-                        icon="pause-circle"
-                        onPress={() => {
-                          update((previous) => setStrengthPaused(previous, true));
-                          setToast('Treinos de força pausados.');
-                        }}
-                      />
-                      <Text style={s.small}>
-                        Oculta apenas o planejamento de força. Cardios e histórico continuam
-                        disponíveis.
-                      </Text>
                     </View>
                   ) : null}
-                  <Button
-                    label="Cobertura muscular"
-                    secondary
-                    icon="activity"
-                    onPress={() => setRoute({ page: 'coverage' })}
-                  />
-                  <Button
-                    label="Rotinas de cardio"
-                    secondary
-                    icon="heart"
-                    onPress={() => setRoute({ page: 'cardio' })}
-                  />
-                  <Button
-                    label="Importar treinos por texto"
-                    secondary
-                    icon="download"
-                    onPress={() => setRoute({ page: 'bulk-import' })}
-                  />
-                  <Button
-                    label="Backup e restauração"
-                    secondary
-                    icon="save"
-                    onPress={() => setRoute({ page: 'backup' })}
-                  />
-                  <Button
-                    label="Conjuntos de rotinas"
-                    secondary
-                    icon="archive"
-                    onPress={() => setRoute({ page: 'routine-sets' })}
+                  <RoutineActions
+                    paused={pausedStrength}
+                    canPause={visibleRoutines.length > 0}
+                    onTogglePause={() => {
+                      if (pausedStrength) {
+                        update((previous) => setStrengthPaused(previous, false));
+                        setToast('Treinos de força retomados.');
+                        return;
+                      }
+                      setDialog({
+                        title: 'Pausar treinos de força?',
+                        message:
+                          'As rotinas deixam de aparecer no planejamento e no widget de musculação até você retomar. Seus dados, treinos em andamento, cardios e histórico continuam disponíveis.',
+                        label: 'Confirmar pausa',
+                        cancelLabel: 'Cancelar',
+                        onConfirm: () => {
+                          update((previous) => setStrengthPaused(previous, true));
+                          setToast('Treinos de força pausados.');
+                        },
+                      });
+                    }}
+                    onCoverage={() => setRoute({ page: 'coverage' })}
+                    onCardio={() => setRoute({ page: 'cardio' })}
+                    onImport={() => setRoute({ page: 'bulk-import' })}
+                    onBackup={() => setRoute({ page: 'backup' })}
+                    onSets={() => setRoute({ page: 'routine-sets' })}
                   />
                   <Button
                     label="Nova divisão"
@@ -1776,7 +1751,11 @@ function Ritmo() {
               }}
             />
             {dialog?.onConfirm && (
-              <Button label="Voltar" secondary onPress={() => setDialog(null)} />
+              <Button
+                label={dialog.cancelLabel ?? 'Voltar'}
+                secondary
+                onPress={() => setDialog(null)}
+              />
             )}
           </View>
         </View>

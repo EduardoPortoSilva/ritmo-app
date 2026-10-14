@@ -31,6 +31,19 @@ test('guarda o plano anterior e alterna conjuntos com rotina compartilhada', asy
   await expect(page.getByText('Treino B', { exact: true })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Pausar treinos de força' }).click();
+  await expect(page.getByText('Pausar treinos de força?', { exact: true })).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => JSON.parse(localStorage.getItem('@ritmo/database/v1')!).strengthPaused ?? false,
+      ),
+    )
+    .toBe(false);
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(page.getByText('Treino A', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('strength-paused')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Pausar treinos de força' }).click();
+  await page.getByRole('button', { name: 'Confirmar pausa', exact: true }).click();
   await expect(page.getByTestId('strength-paused')).toContainText('cardios e histórico');
   await expect(page.getByText('Treino A', { exact: true })).toHaveCount(0);
   await page.screenshot({ path: 'test-results/planejamento-forca-pausado.png' });
