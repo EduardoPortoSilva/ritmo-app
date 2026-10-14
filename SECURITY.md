@@ -10,6 +10,8 @@ O backup automático Android está desativado por manifesto e regras explícitas
 
 A restauração valida o banco, mostra prévia e pede confirmação. Ela espera a fila de gravações, confere a escrita e tenta rollback conferido se houver falha. Limites de tamanho evitam leituras/gravações acima do aceito; consulte [Dados](docs/DADOS.md) e [Backup](docs/BACKUP-E-ASSINATURA.md). Erros não devem provocar limpeza automática do banco.
 
+O parser compartilhado recusa IDs de força vazios ou repetidos no escopo de cada ação, planejamentos sem exercícios e metas de repetição inválidas. Snapshots de sessões diferentes podem conservar IDs de exercícios iguais, e séries pendentes mantêm campos ainda não concluídos. Não existe deduplicação silenciosa de backups.
+
 ## Assinatura e arquivos privados
 
 A assinatura release exige chave privada. `.tools/signing/`, JKS e `credentials.json` são locais e ignorados; o script de geração protege a pasta com ACL NTFS para a conta de desenvolvimento. O arquivo de credenciais contém a senha em texto claro para essa conta. Proteja também a cópia externa da chave/credenciais.
@@ -23,6 +25,8 @@ O serviço de descanso Android é não exportado, tem duração limitada e liber
 `package-lock.json` registra as versões usadas. Antes de uma nova distribuição, execute Expo Doctor e `npm audit`, analise a cadeia afetada e valide uma correção compatível com o SDK. Não aplique `npm audit fix --force` automaticamente.
 
 A revisão local de 02/10/2026 registrou pendências transitivas nas ferramentas do Expo (`node-forge` e `uuid`) e divergência de patch do Expo Doctor. Esse é um resultado histórico, não uma consulta atual nem prova de exploração no APK. Detalhes do estado e limites em [Estado](docs/ESTADO.md); reavalie dependências antes de distribuir ou habilitar novas integrações.
+
+Na correção concluída em 14/10/2026, Expo foi atualizado para 57.0.28 dentro do SDK 57; `shell-quote`, `source-map-js` e `uuid` passaram a versões sem os avisos identificados. Expo Doctor passou nos 21 checks. A nova consulta npm ainda sinaliza **15 ocorrências altas, zero críticas/moderadas**, derivadas de dois avisos em `braces@3.0.3` e `node-forge@1.4.0`, nas ferramentas Metro/CLI. Não havia versão corrigida publicada desses dois pacotes na consulta. Isso permanece pendente de correção compatível upstream; não é evidência de exploração no runtime do app. As correções foram incorporadas ao APK build 13 de 14/10/2026; APKs anteriores precisam ser atualizados para recebê-las.
 
 iOS, aparelhos físicos e o comportamento audível com outros aplicativos não têm a mesma cobertura das verificações web/emulador. Não use essas verificações como certificação de segurança de todas as plataformas.
 

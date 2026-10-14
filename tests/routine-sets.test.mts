@@ -22,6 +22,8 @@ import { widgetSnapshot } from '../src/widgetSnapshot.ts';
 function fixture(): Database {
   const a = { ...newRoutine(), name: 'Treino A' };
   const b = { ...newRoutine(), name: 'Treino B' };
+  a.exercises[0].name = 'Supino';
+  b.exercises[0].name = 'Remada';
   return { ...emptyDatabase(), routines: [a, b] };
 }
 

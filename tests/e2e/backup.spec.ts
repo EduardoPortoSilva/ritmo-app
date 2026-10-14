@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { bulkImportExample } from '../../src/bulkImport';
+import { emptyDatabase, newRoutine, startWorkout } from '../../src/model';
 
 test('exporta um arquivo completo e restaura apenas apos previa e confirmacao', async ({
   page,
@@ -75,4 +76,44 @@ test('recusa arquivo acima do limite antes da previa', async ({ page }) => {
     page.getByText('O arquivo \u00e9 grande demais para restaurar com seguran\u00e7a.'),
   ).toBeVisible();
   await expect(page.getByTestId('backup-preview')).toHaveCount(0);
+});
+
+test('backup malformado não abre prévia nem substitui o banco existente', async ({ page }) => {
+  const routine = newRoutine();
+  routine.name = 'Dados preservados';
+  routine.exercises[0].name = 'Supino';
+  const original = JSON.stringify({ ...emptyDatabase(), routines: [routine] });
+  await page.addInitScript((raw) => localStorage.setItem('@ritmo/database/v1', raw), original);
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Rotinas', exact: true }).click();
+  await page.getByRole('button', { name: 'Backup e restauração', exact: true }).click();
+
+  const duplicated = {
+    ...emptyDatabase(),
+    routines: [routine, { ...routine, name: 'Outra rotina' }],
+  };
+  const invalidReps = structuredClone({ ...emptyDatabase(), routines: [routine] });
+  invalidReps.routines[0].exercises[0].reps = ['inválida'];
+  const emptyPlan = structuredClone({ ...emptyDatabase(), routines: [routine] });
+  emptyPlan.routines[0].exercises = [];
+  const active = startWorkout(routine);
+  active.exercises.push(structuredClone(active.exercises[0]));
+  for (const database of [duplicated, invalidReps, emptyPlan, { ...emptyDatabase(), active }]) {
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Escolher arquivo de backup' }).click();
+    await (
+      await chooser
+    ).setFiles({
+      name: 'backup-malformado.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({ format: 'ritmo-backup/1', exportedAt: '2026-10-13T12:00:00Z', database }),
+      ),
+    });
+    await expect(
+      page.getByText('Os dados do backup são inválidos; nada foi restaurado.'),
+    ).toBeVisible();
+    await expect(page.getByTestId('backup-preview')).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('@ritmo/database/v1'))).toBe(original);
+  }
 });

@@ -12,6 +12,8 @@ Todos os comandos abaixo partem da raiz Git, que neste workspace é `mobile/`. U
 - Não aplique `npm audit fix --force` sem analisar a mudança de versões e a compatibilidade.
 - Não edite `node_modules/`. Configurações nativas duráveis devem partir de `app.json` ou de um config plugin versionado.
 
+`package.json` mantém um override restrito a `xcode → uuid@11.1.1` para evitar a versão sinalizada pelo advisory de buffer de UUID. O `xcode@3.0.1` usa `require('uuid').v4()`, API CommonJS conferida na atualização de segurança concluída em 14/10/2026. Ao atualizar/remover esse override, valide também a geração de IDs de projeto pelo pacote xcode. `shell-quote` e `source-map-js` recebem versões corrigidas compatíveis com os intervalos dos seus dependentes no lockfile.
+
 ## Trabalhar com segurança e autonomia
 
 Inspecione mudanças existentes antes de editar; não reverta alterações alheias nem faça limpeza global do workspace. Decisões rotineiras de implementação e validação devem prosseguir dentro do pedido do usuário.

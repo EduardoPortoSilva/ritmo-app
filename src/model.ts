@@ -515,10 +515,15 @@ export const duration = (workout: Workout) =>
 export function parseDatabase(raw: string): Database {
   const value = JSON.parse(raw);
   const string = (v: unknown) => typeof v === 'string';
+  const identity = (v: unknown) => string(v) && (v as string).trim().length > 0;
+  // IDs are unique within their editing/deletion scope. Historical snapshots may
+  // reuse the planned exercise ID across different workouts and routines.
+  const uniqueIds = (items: readonly { id: string }[]) =>
+    new Set(items.map((item) => item.id)).size === items.length;
   const date = (v: unknown) => string(v) && Number.isFinite(Date.parse(v as string));
   const routine = (r: any) =>
     r &&
-    string(r.id) &&
+    identity(r.id) &&
     string(r.name) &&
     string(r.note) &&
     (r.division === undefined ||
@@ -533,7 +538,7 @@ export function parseDatabase(raw: string): Database {
     r.exercises.every(
       (e: any) =>
         e &&
-        string(e.id) &&
+        identity(e.id) &&
         string(e.name) &&
         (e.note === undefined || validExerciseNote(e.note)) &&
         (e.muscles === undefined || validMuscleLinks(e.muscles)) &&
@@ -543,21 +548,24 @@ export function parseDatabase(raw: string): Database {
           (Array.isArray(e.rests) &&
             e.rests.length === e.reps.length &&
             e.rests.every((rest: unknown) => string(rest) && validRest(rest as string)))),
-    );
+    ) &&
+    uniqueIds(r.exercises) &&
+    routineError(r) === null;
   const workout = (w: any) =>
     w &&
-    string(w.id) &&
-    string(w.routineId) &&
-    string(w.name) &&
+    identity(w.id) &&
+    identity(w.routineId) &&
+    identity(w.name) &&
     date(w.startedAt) &&
     (w.finishedAt === undefined || date(w.finishedAt)) &&
     (w.bodyWeight === undefined || (string(w.bodyWeight) && validBodyWeight(w.bodyWeight))) &&
     Array.isArray(w.exercises) &&
+    w.exercises.length > 0 &&
     w.exercises.every(
       (e: any) =>
         e &&
-        string(e.id) &&
-        string(e.name) &&
+        identity(e.id) &&
+        identity(e.name) &&
         (e.note === undefined || validExerciseNote(e.note)) &&
         (e.muscles === undefined || validMuscleLinks(e.muscles)) &&
         (e.loadAdjustment === undefined ||
@@ -566,21 +574,28 @@ export function parseDatabase(raw: string): Database {
         (e.cramp === undefined || typeof e.cramp === 'boolean') &&
         (e.externalImpediment === undefined || typeof e.externalImpediment === 'boolean') &&
         Array.isArray(e.sets) &&
+        e.sets.length > 0 &&
+        e.sets.length <= 20 &&
         e.sets.every(
           (s: any) =>
             s &&
-            string(s.id) &&
+            identity(s.id) &&
             string(s.target) &&
+            validReps(s.target) &&
             string(s.reps) &&
             string(s.weight) &&
             (s.rest === undefined || (string(s.rest) && validRest(s.rest))) &&
-            typeof s.done === 'boolean',
-        ),
-    );
+            typeof s.done === 'boolean' &&
+            (!s.done || (validReps(s.reps) && validWeight(s.weight))),
+        ) &&
+        uniqueIds(e.sets),
+    ) &&
+    uniqueIds(w.exercises);
   if (
     value?.version !== 1 ||
     !Array.isArray(value.routines) ||
     !value.routines.every(routine) ||
+    !uniqueIds(value.routines) ||
     (value.routineSets !== undefined &&
       (!Array.isArray(value.routineSets) ||
         !value.routineSets.length ||
@@ -607,6 +622,7 @@ export function parseDatabase(raw: string): Database {
     !value.workouts.every(
       (w: any) => workout(w) && date(w.finishedAt) && workoutError(w) === null,
     ) ||
+    !uniqueIds(value.workouts) ||
     (value.supplements !== undefined &&
       (!Array.isArray(value.supplements) ||
         !value.supplements.every(isSupplement) ||
