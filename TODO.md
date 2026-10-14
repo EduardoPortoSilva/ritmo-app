@@ -1,5 +1,33 @@
 # TODO
 
+## Atalhos da aba Rotinas — 2026-10-13
+
+- [x] Reunir os seis atalhos em uma grade com três por linha, mantendo Nova divisão separada.
+- [x] Usar braço flexionado em Cobertura, batimento em Cardio e robô em Importar; preservar os ícones de Pausar, Backup e Conjuntos.
+- [x] Confirmar a pausa do planejamento de força em modal antes de aplicar.
+
+## Impedimentos, observações e sugestões — 2026-10-13
+
+- [x] Exibir observação somente no cabeçalho durante o treino, com lápis e modal de edição; salvar explicitamente ou cancelar o rascunho.
+
+- [x] Generalizar Cãibra para Impedimento e adicionar Impedimento externo, independente.
+- [x] Distinguir sugestões automáticas por triângulo único: verde para subir, vermelho para baixar.
+- [x] Sugerir redução após maioria abaixo de metade da meta em cada um dos dois últimos treinos; impedimento externo invalida a comparação.
+- [x] Guardar observações livres por exercício no editor e na execução, preservando snapshots antigos e aceitando nota na importação.
+
+## Execução e lembretes — concluído em 2026-10-13
+
+- [x] Priorizar o exercício atual e abrir o gráfico em modal pelo botão de expansão.
+- [x] Registrar aumentar/manter/diminuir carga e cãibra por exercício; mostrar ícones no cabeçalho do exercício no próximo treino e no histórico.
+- [x] Mostrar repetições e carga anteriores da série ao lado da meta.
+- [x] Indicar progressão após dois treinos com as mesmas cargas e todas as metas atingidas; respeitar lembretes de manter/diminuir/cãibra.
+
+## Gráficos padrão — concluído em 2026-10-05
+
+- [x] Exibir peso corporal × data por padrão na aba Gráficos, usando os pesos informados ao finalizar treinos.
+- [x] Exibir esforço relativo × data como segundo gráfico padrão. Esforço = soma de carga × repetições das séries concluídas; percentual inteiro = parte de cada sessão em relação ao maior esforço histórico da mesma rotina e fase de planejamento (ex.: 1.000/1.500 = 66%). IDs de rotina diferentes nunca são reunidos, mesmo com o mesmo nome. Mudanças de exercícios ou metas abrem outra fase; nome, descanso e observações não. Cores e rótulos identificam essas fases também no histórico.
+- [x] Adicionar período comum aos dois gráficos padrão: 30 dias, 90 dias (inicial), 1 ano e tudo. O filtro não altera o máximo histórico usado para normalizar.
+
 ## Widgets compactos — proposta aprovada em 2026-10-03
 
 - [x] **Adotar a versão compacta nos widgets Android de treinos e suplementos.**

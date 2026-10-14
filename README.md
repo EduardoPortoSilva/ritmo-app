@@ -9,13 +9,13 @@ Aplicativo pessoal de musculação, cardio e hábitos diários, com interface em
 - **Planejamento de força:** rotinas avulsas, divisões como ABC, dias da semana, metas e descansos individuais por série.
 - **Conjuntos de rotinas:** guarde planos anteriores, alterne o conjunto ativo e pause o planejamento de força preservando os dados.
 - **Execução:** um exercício por vez, carga e repetições realizadas, confirmação de séries, descanso com pausa/retomada e recuperação do treino em andamento.
-- **Histórico e gráficos:** sessões completas ou parciais, volume, duração, carga máxima, repetições, carga efetiva total e peso corporal opcional.
+- **Histórico e gráficos:** sessões completas ou parciais, volume, duração, carga máxima, repetições, carga efetiva total, esforço relativo por fase e peso corporal opcional.
 - **Cobertura muscular:** vínculos principais/secundários escolhidos pelo usuário e mapa esquemático de frente e costas.
 - **Cardio:** etapas de duração e velocidade, cronômetro, pausa/retomada e distância esperada/real no histórico.
 - **Suplementos:** registro diário, sequência de dias e lembretes locais opcionais no Android.
 - **Importação por texto:** planejamento em JSON `ritmo/1`, com conferência e prévia antes de importar o lote.
 - **Backup manual:** exportação e restauração do banco completo em JSON `ritmo-backup/1`.
-- **Android nativo:** widgets compactos de treinos e suplementos em 4×1, 3×1 ou cartão vertical 1×2 e aviso de descanso mesmo com outro app aberto ou a tela apagada.
+- **Android nativo:** widgets compactos de treinos e suplementos em 4×1, 3×1 ou cartão vertical 1×2 e avisos de descanso e de mudança de velocidade do cardio mesmo com outro app aberto ou a tela apagada.
 
 Os dados do navegador e do Android são independentes. Não há sincronização automática, prescrição de exercícios ou doses, nem controle da esteira.
 
@@ -48,15 +48,15 @@ Esse comando compila e instala uma versão de desenvolvimento. O APK de distribu
 
 ## Plataformas
 
-| Recurso                                          | APK Android     | Web                              | Expo Go                                  |
-| ------------------------------------------------ | --------------- | -------------------------------- | ---------------------------------------- |
-| Rotinas, séries, histórico e gráficos            | Sim             | Sim                              | Sim                                      |
-| Cardio, suplementos e importação de planejamento | Sim             | Sim                              | Sim                                      |
-| Backup por arquivo                               | Seletor Android | Arquivo no navegador             | Depende da disponibilidade das APIs Expo |
-| Widgets e lembretes locais de suplementos        | Sim             | Não                              | Não                                      |
-| Aviso de descanso em segundo plano               | Serviço nativo  | Depende da tela/JavaScript ativo | Depende da tela/JavaScript ativo         |
+| Recurso                                          | APK Android      | Web                              | Expo Go                                  |
+| ------------------------------------------------ | ---------------- | -------------------------------- | ---------------------------------------- |
+| Rotinas, séries, histórico e gráficos            | Sim              | Sim                              | Sim                                      |
+| Cardio, suplementos e importação de planejamento | Sim              | Sim                              | Sim                                      |
+| Backup por arquivo                               | Seletor Android  | Arquivo no navegador             | Depende da disponibilidade das APIs Expo |
+| Widgets e lembretes locais de suplementos        | Sim              | Não                              | Não                                      |
+| Avisos de descanso e cardio em segundo plano     | Serviços nativos | Depende da tela/JavaScript ativo | Depende da tela/JavaScript ativo         |
 
-O aviso de mudança de velocidade do **cardio** depende do painel aberto e do JavaScript ativo, inclusive no Android. O serviço de segundo plano é específico do descanso de força.
+No APK release 1.0.5/build 13, os avisos de mudança de velocidade do **cardio** e de fim do descanso de força usam serviços nativos em segundo plano. O APK histórico, build 7, ainda não contém o serviço de cardio. Na web e no Expo Go sem esses módulos, os avisos dependem da tela e do JavaScript ativos. Consulte [Estado e validação](docs/ESTADO.md) para identificar o APK efetivamente compilado e instalado.
 
 ## Stack e organização
 
@@ -132,7 +132,7 @@ Leia [modelo de dados](docs/DADOS.md), [backup](docs/BACKUP-E-ASSINATURA.md) e [
 
 O [índice de documentação](docs/README.md) reúne o guia de uso, arquitetura, regras, testes, cardio, músculos, importação e publicação no Git. Para contribuir, leia [CONTRIBUTING.md](CONTRIBUTING.md) e [AGENTS.md](AGENTS.md).
 
-Versão do app: **1.0.5**, Android `versionCode` **7**. [Estado e validação](docs/ESTADO.md) separa as verificações atuais das evidências históricas. APKs e relatórios locais não acompanham automaticamente um clone do código.
+Versão do app: **1.0.5**, Android `versionCode` **13**. [Estado e validação](docs/ESTADO.md) separa as verificações atuais das evidências históricas. APKs e relatórios locais não acompanham automaticamente um clone do código.
 
 ## Licença
 

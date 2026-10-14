@@ -1,4 +1,4 @@
-# Importação de rotinas por texto — formato `ritmo/1`
+﻿# Importação de rotinas por texto — formato `ritmo/1`
 
 Esta é a especificação para enviar a uma LLM. Peça: **“Leia a especificação abaixo e gere somente um JSON válido no formato `ritmo/1` para o plano que eu descrever. Não escreva comentários, Markdown ou explicações. Não invente campos nem IDs musculares.”** O app também oferece **Copiar instruções para IA**, que inclui as regras e o catálogo completo de IDs.
 
@@ -23,6 +23,8 @@ Use JSON padrão, com aspas duplas nos nomes das propriedades e strings; número
 | Exercício `musculos`        | Opcional. Lista de `{ "id": ID, "papel": "principal" ou "secundario" }`; cada ID só pode aparecer uma vez por exercício. Aceita grupos amplos e músculos/porções específicos. Se não souber, omita. |
 | `cardios`                   | Lista de rotinas de cardio, cada uma com `nome`, `dias` opcional e `etapas`.                                                                                                                        |
 | Cardio `etapas`             | Lista de 1 a 50 objetos `{ "minutos": número, "velocidade": número }`. Minutos: 0,1 a 60; velocidade: 0 a 40 km/h; total: até 4 horas.                                                              |
+
+Cada exercício também aceita `nota` opcional: texto livre de até 300 caracteres, por exemplo `Barra W` ou `máquina`.
 
 Uma importação aceita até 20 divisões e 50 rotinas somando treinos e cardios; o texto pode ter até 100.000 caracteres. Nomes de divisões, treinos no mesmo local e cardios não podem repetir nomes existentes ou nomes do próprio lote (comparação sem diferença entre maiúsculas e acentos). A importação **acrescenta** planejamento e não substitui rotinas anteriores, sessões ativas ou histórico. Não inclua carga/peso: esses valores são registrados na execução, não no planejamento.
 

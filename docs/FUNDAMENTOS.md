@@ -1,4 +1,4 @@
-# Fundamentos do Ritmo
+﻿# Fundamentos do Ritmo
 
 ## Objetivo e decisões
 
@@ -74,11 +74,27 @@ Durante a execução, `WorkoutScreen` mostra um exercício por vez, com contador
 
 ### Histórico de carga durante o treino
 
-Quando o exercício exibido tem ao menos uma série concluída no histórico da mesma rotina, o card de progresso é substituído pelo gráfico de `src/LoadHistoryChart.tsx`. Cada ponto do gráfico de linhas mostra a maior carga válida entre as séries concluídas daquele exercício em uma sessão finalizada; 0 kg é válido e séries pendentes não entram no cálculo. A consulta `exerciseLoadHistory` em `src/model.ts` associa rotina e exercício pelos IDs e não modifica os registros.
+O exercício atual e suas séries são o conteúdo principal da execução. O progresso do treino permanece compacto e o botão de expansão do exercício abre `src/WorkoutHistoryModal.tsx`, com o gráfico de `src/LoadHistoryChart.tsx` ou uma mensagem sem histórico. Fechar o modal (inclusive pelo Voltar do Android) preserva a série e os valores atuais. Cada ponto do gráfico de linhas mostra a maior carga válida entre as séries concluídas daquele exercício em uma sessão finalizada; 0 kg é válido e séries pendentes não entram no cálculo. A consulta `exerciseLoadHistory` em `src/model.ts` associa rotina e exercício pelos IDs e não modifica os registros.
 
-O eixo horizontal é categórico: sessões ordenadas por `finishedAt`, com pontos igualmente espaçados, independentemente do intervalo entre datas. Duas sessões na mesma data permanecem separadas. As etiquetas incluem dia/mês e ano; o nome acessível também inclui horário e carga. O histórico pode ser deslizado horizontalmente e abre nos registros mais recentes. Sem histórico do exercício, o card de progresso original permanece. O gráfico usa componentes nativos, sem dependência de biblioteca de gráficos e sem mudança no esquema persistido.
+O eixo horizontal é categórico: sessões ordenadas por `finishedAt`, com pontos igualmente espaçados, independentemente do intervalo entre datas. Duas sessões na mesma data permanecem separadas. As etiquetas incluem dia/mês e ano; o nome acessível também inclui horário e carga. O histórico pode ser deslizado horizontalmente e abre nos registros mais recentes. O gráfico usa componentes nativos, sem dependência de biblioteca de gráficos e sem mudança no esquema persistido.
 
 O gráfico também sobrepõe uma linha roxa tracejada com as repetições realizadas na série mais pesada, usando a mesma escala numérica vertical da carga e as mesmas posições de data. O limite superior considera ambas as grandezas. Em empate de carga, a série concluída com mais repetições é escolhida. Carga e repetições vêm sempre da mesma série válida; metas, séries pendentes e repetições de séries mais leves não entram nesse ponto. A legenda distingue carga (kg) e repetições. Marcadores e etiquetas permanecem visíveis quando há apenas um registro. `ExerciseLoadRecord` é um resultado derivado com `weight` e `reps`, sem alteração da estrutura persistida.
+
+### Comparação de séries e lembretes de carga
+
+Ao lado da meta de cada série, a execução mostra repetições e carga realizadas na posição correspondente da sessão finalizada mais recente da mesma rotina. Exercícios são associados por ID; série pendente, nova ou ausente não busca valores de sessões mais antigas. Zero kg e vírgula decimal continuam válidos.
+
+Abaixo de Anterior/Próximo, o exercício tem opções mutuamente exclusivas **Aumentar carga**, **Manter carga** e **Diminuir carga**, além de **Impedimento**, independente. Tocar novamente desmarca. Os campos opcionais `LoggedExercise.loadAdjustment` e `cramp` pertencem à sessão, persistem ao retomar e acompanham o histórico/backup; não modificam o planejamento nem a conclusão das séries. No próximo treino, as marcações anteriores aparecem uma única vez no cabeçalho do exercício: dois triângulos verdes para cima (aumentar), dois amarelos para baixo (diminuir), igual azul (manter) e triângulo vermelho com exclamação (impedimento). Cada ícone tem nome acessível. Os controles novos começam desmarcados e usam os mesmos símbolos com rótulos. O detalhe histórico também mostra os ícones por exercício. O botão que abre o modal usa um ícone de gráfico de barras.
+
+O ícone de progressão e seu texto aparecem quando os dois últimos treinos finalizados da rotina têm o mesmo exercício, todas as séries concluídas, mesmas metas da sessão atual, repetições realizadas maiores ou iguais às metas e carga numericamente igual em cada posição nas duas sessões. Séries com pesos diferentes entre si são permitidas, desde que cada posição repita seu próprio peso. Sessão parcial, exercício ausente, séries/metas alteradas ou apenas uma sessão não sugerem progressão. Manter/diminuir ou impedimento no último treino suprimem o aviso automático. O aviso não altera a carga preenchida.
+
+A marcação **Impedimento externo** (`externalImpediment`) é independente: registra tempo, equipamento ocupado e outras situações externas. O ícone é um relógio cinza. Estar presente em qualquer uma das duas sessões comparadas bloqueia ambas as sugestões automáticas, sem saltar para sessões mais antigas. Impedimento geral pode coexistir e ainda permite a sugestão de redução, mas bloqueia a de aumento no último treino.
+
+As sugestões automáticas usam um triângulo único, verde para aumentar ou vermelho para diminuir, com o rótulo **Sugestão do app**, diferenciando-as dos lembretes manuais. `suggestsLoadDecrease` exige que cada uma das duas últimas sessões tenha o exercício e a mesma quantidade de séries/metas da sessão atual. Em cada sessão, mais da metade de todas as séries deve ter registro concluído/válido com repetições menores que metade da meta. A igualdade com metade não conta; pendentes não viram falhas. As cargas não precisam ser iguais para sugerir redução e nunca são ajustadas automaticamente.
+
+### Observações por exercício
+
+`PlannedExercise.note` e `LoggedExercise.note` são textos livres opcionais de até 300 caracteres. O editor compartilhado de rotinas/divisões oferece o campo; a consulta e o histórico mostram o texto. Iniciar copia a observação planejada para a sessão. Na execução, o texto aparece no cabeçalho com um lápis para abrir `ExerciseNoteModal`; o campo não aparece junto às séries. O modal guarda um rascunho local: Salvar chama `setActiveExerciseNote`, que atualiza a sessão atual e o exercício da mesma rotina/ID no planejamento, sem alterar cargas, metas, conclusão ou histórico. Cancelar, X e Voltar do Android fecham sem salvar. Se o planejamento foi excluído, só a sessão é atualizada. Editar uma rotina fora da execução conserva os snapshots já iniciados/finalizados. O formato de importação aceita `nota` opcional por exercício.
 
 ### Peso corporal na finalização
 
@@ -93,6 +109,14 @@ O campo opcional é compatível com `Database.version: 1`: registros antigos sem
 A tela Início exibe `BodyWeightChart`, abaixo dos resumos de treinos. A consulta `bodyWeightHistory` reúne somente pesos corporais válidos de sessões finalizadas, em todas as rotinas, ordenados por `finishedAt`. Treinos sem peso não criam pontos nem recebem valores estimados; sessões na mesma data permanecem separadas. Excluir um treino remove seu ponto automaticamente.
 
 O gráfico reutiliza o desenho de linhas em `src/LoadHistoryChart.tsx`, com datas equidistantes e rolagem horizontal para históricos extensos. O card mostra o último peso registrado, marcadores com valores e datas com ano. Para evidenciar pequenas variações, o eixo vertical se ajusta ao intervalo dos pesos, com margem e limites numéricos explícitos; ele não precisa começar em zero. Um único registro aparece como ponto. Sem pesos, o card orienta a registrá-los na finalização. Sem novos campos persistidos ou dependências.
+
+### Esforço relativo e janelas dos gráficos
+
+`src/effort.ts` deriva o esforço dos `Workout` finalizados, sem novos campos no banco: volume = soma de repetições realizadas × carga das séries concluídas. A referência de 100% é o maior volume de todas as sessões da mesma rotina (por `routineId`) e da mesma fase. O percentual inteiro trunca a fração: 1.000/1.500 = 66%. Uma sessão com 0 kg tem 0% se a fase contém referência positiva; se toda a fase tem 0 kg, o percentual fica indefinido.
+
+A fase é inferida das cópias históricas de exercícios: IDs, nomes, ordem e metas de cada série. Quando essa assinatura muda entre sessões da mesma rotina, abre-se outra fase com máximo próprio. Nome do treino, descanso, observações, carga e repetições realizadas não iniciam fase. Rotinas com o mesmo nome e IDs diferentes não são reunidas. O histórico e o detalhe mostram a mesma cor e o mesmo percentual do gráfico; cores são apoio visual e os rótulos distinguem treino e fase. Excluir sessões recalcula os máximos dos registros restantes, sem reescrever o histórico salvo.
+
+Na aba Gráficos, `src/EffortHistoryChart.tsx` aparece após o peso corporal. O seletor comum filtra por 30 dias, 90 dias (inicial), 365 dias ou todo o histórico. A referência de 100% continua sendo calculada com todas as sessões da fase, inclusive fora da janela. Pontos do mesmo dia permanecem separados. O gráfico de exercício individual mantém sua consulta própria. O cálculo e a apresentação são derivados; `Database.version` continua 1.
 
 ### Programação semanal das rotinas
 
@@ -166,7 +190,9 @@ Catálogo, regras de contagem, fontes anatômicas, projeções do mapa e detalhe
 
 A aba Rotinas abre o gerenciamento de conjuntos. Somente as rotinas do conjunto ativo aparecem na lista principal, na tela Início, na programação diária, na análise de cobertura e no widget de musculação. A tela de conjuntos permite abrir qualquer rotina vinculada, editar associações, ativar planos anteriores e excluir apenas o agrupamento. Novas rotinas, divisões e importações são vinculadas ao conjunto ativo. Excluir uma rotina limpa seus vínculos; remover um treino ao editar uma divisão também limpa vínculos obsoletos. Histórico e treino em andamento são independentes do conjunto escolhido. Rotinas sem conjunto continuam preservadas e podem ser associadas na edição de um conjunto.
 
-`Database.strengthPaused?: boolean` permite pausar diretamente o planejamento de musculação sem criar um conjunto vazio. Quando verdadeiro, `activeRoutines` não retorna rotinas para a lista principal, os treinos de hoje, a cobertura geral nem o widget de musculação. O conjunto, seus vínculos e as rotinas continuam salvos. A aba Rotinas oferece **Pausar treinos de força** e **Retomar treinos de força**; o estado persiste ao reabrir o app. Ativar outro conjunto também retoma o planejamento de força. Cardios, histórico e treino em andamento continuam independentes dessa pausa. Sem o campo opcional, o banco antigo mantém o comportamento ativo.
+`Database.strengthPaused?: boolean` permite pausar diretamente o planejamento de musculação sem criar um conjunto vazio. Quando verdadeiro, `activeRoutines` não retorna rotinas para a lista principal, os treinos de hoje, a cobertura geral nem o widget de musculação. O conjunto, seus vínculos e as rotinas continuam salvos. A aba Rotinas oferece **Pausar treinos de força** e **Retomar treinos de força**; pausar abre o diálogo compartilhado e só altera o banco em **Confirmar pausa**. Cancelar ou Voltar não aplica a pausa. Retomar permanece imediato; o estado persiste ao reabrir o app. Ativar outro conjunto também retoma o planejamento de força. Cardios, histórico e treino em andamento continuam independentes dessa pausa. Sem o campo opcional, o banco antigo mantém o comportamento ativo.
+
+`src/RoutineActions.tsx` reúne seis atalhos em duas linhas de três, com textos curtos e nomes acessíveis completos. Pausar/retomar, Backup e Conjuntos preservam os ícones Feather; Cobertura, Cardio e Importar usam braço flexionado, coração com batimento e robô do MaterialCommunityIcons, já disponível em `@expo/vector-icons`. As fontes dos dois conjuntos são carregadas antes da interface. Pausar fica desabilitado quando não há rotinas visíveis; a grade mantém seis posições. Nova divisão e Nova rotina continuam fora da grade.
 
 ### Cardio programado e painel de velocidade
 
