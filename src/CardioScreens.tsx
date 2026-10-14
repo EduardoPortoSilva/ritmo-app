@@ -20,6 +20,7 @@ import {
   type CardioRun,
   type CardioSession,
 } from './cardio';
+import { backgroundCardioCueAvailable } from './cardioCue';
 import { colors as c } from './theme';
 import { Button, Field, IconButton, PageHeader, s } from './ui';
 
@@ -244,7 +245,7 @@ export function CardioPlayer({
     return () => clearInterval(timer);
   }, [run.runningSince]);
   useEffect(() => {
-    if (!run.runningSince) {
+    if (!run.runningSince || backgroundCardioCueAvailable) {
       cuePlayer.pause();
       return;
     }

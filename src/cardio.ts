@@ -137,6 +137,21 @@ export function finishCardio(run: CardioRun, distanceKm = '', now = Date.now()):
     ...(distanceKm.trim() ? { distanceKm: String(decimal(distanceKm)) } : {}),
   };
 }
+export function cardioCueSchedule(run: CardioRun, now = Date.now()) {
+  if (!run.runningSince) return null;
+  const elapsedMs = cardioProgress(run, now).elapsedMs;
+  const durationMs = cardioDuration(run.steps) * 1000 - elapsedMs;
+  if (durationMs <= 0) return null;
+  let boundaryMs = 0;
+  const delaysMs: number[] = [];
+  for (let index = 0; index < run.steps.length - 1; index++) {
+    boundaryMs += run.steps[index].durationSeconds * 1000;
+    const warningAt = boundaryMs - 3000;
+    if (run.steps[index].speed !== run.steps[index + 1].speed && warningAt > elapsedMs)
+      delaysMs.push(Math.ceil(warningAt - elapsedMs));
+  }
+  return { delaysMs, durationMs: Math.ceil(durationMs) };
+}
 export function cardioCueBoundary(run: CardioRun, now = Date.now()): number | null {
   if (!run.runningSince) return null;
   const elapsed = cardioProgress(run, now).elapsedMs;

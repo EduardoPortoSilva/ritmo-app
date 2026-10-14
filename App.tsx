@@ -82,6 +82,7 @@ import {
   type CardioRoutine,
   type CardioSession,
 } from './src/cardio';
+import { backgroundCardioCueAvailable, syncBackgroundCardioCue } from './src/cardioCue';
 import { requestWidget, widgetAvailable } from './src/widget';
 import { SupplementCard, SupplementEditor } from './src/SupplementScreens';
 import { dayKey, setSupplementTaken, supplementError, type Supplement } from './src/supplements';
@@ -234,6 +235,20 @@ function Ritmo() {
     setDb(data);
     void persist(data);
   }
+  useEffect(() => {
+    if (!ready) return;
+    try {
+      syncBackgroundCardioCue(db.activeCardio ?? null);
+      if (
+        Platform.OS === 'android' &&
+        db.activeCardio?.runningSince &&
+        !backgroundCardioCueAvailable
+      )
+        setToast('Avisos de cardio em segundo plano indisponíveis nesta instalação.');
+    } catch {
+      setToast('Não foi possível agendar os avisos de cardio em segundo plano.');
+    }
+  }, [ready, db.activeCardio]);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {

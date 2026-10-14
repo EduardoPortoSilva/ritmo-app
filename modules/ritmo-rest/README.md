@@ -1,4 +1,4 @@
-# Aviso de descanso em segundo plano (Android)
+# Avisos de descanso e cardio em segundo plano (Android)
 
 `RitmoRestModule` inicia `RestCueService` quando o usuário toca em Iniciar/Retomar descanso. O serviço fica em primeiro plano no sentido do Android e mostra uma notificação persistente enquanto a contagem roda. Usa `SystemClock.elapsedRealtime()` e um wake lock parcial com prazo máximo igual ao descanso (até 3600 s) mais 5 s. Assim o JavaScript pode ser suspenso ao abrir outro app ou apagar a tela sem atrasar a chamada do som. Pausar, trocar o descanso ou sair da tela de treino libera o serviço e o wake lock. O serviço termina após tocar o aviso.
 
@@ -7,3 +7,7 @@ O WAV em `android/src/main/res/raw/ritmo_rest_cue.wav` é uma cópia de `assets/
 A tela React conserva o cronômetro transitório e sincroniza a ação do usuário com o serviço. No Android instalado como APK, o som nativo é a fonte do aviso, inclusive quando o app está visível. Web, iOS e Expo Go sem o módulo usam o aviso anterior da tela. Se o Android recusar iniciar o serviço, a tela avisa e mantém o cronômetro local. Forçar parada, desinstalar ou matar o processo do serviço cancela o aviso; não há restauração após reinicialização do aparelho.
 
 Para testar, instale o APK num AVD isolado, inicie um descanso de 10 s, aperte Home e confira que `RitmoRestCue` registra início e conclusão no logcat sem reabrir o Ritmo. Repita com a tela apagada. Pausar antes do prazo deve registrar parada sem conclusão. O log de conclusão comprova a tentativa de reprodução nativa, mas audibilidade e redução de outros apps exigem teste com som real em um telefone.
+
+`CardioCueService` usa um serviço próprio para os avisos de troca de velocidade, independente do descanso de força. Ao iniciar ou retomar o cardio, `src/cardioCue.ts` agenda os avisos futuros três segundos antes de cada mudança de velocidade. A agenda é recalculada pelo tempo real ao carregar o banco ou retomar; pausar, encerrar ou concluir cancela o serviço. O serviço mantém notificação persistente e wake lock parcial até o fim da sequência, reproduz o mesmo WAV de três bipes com foco temporário `MAY_DUCK` e libera o foco após cada aviso. Web e Expo Go sem módulo nativo usam o áudio da tela. Forçar parada, reiniciar o aparelho ou matar o serviço cancela os avisos; a próxima abertura do app recalcula os futuros.
+
+No AVD isolado, teste duas mudanças de velocidade com o app em segundo plano e a tela apagada. Confira `RitmoCardioCue` no logcat. Repita pausando antes do aviso, retome e confira que apenas avisos futuros são tocados. Teste também descanso de força simultâneo; os serviços são independentes. O log não comprova audibilidade nem a redução do volume de outro app em um telefone físico.

@@ -4,6 +4,7 @@ import {
   cardioForDate,
   cardioProgress,
   cardioCueBoundary,
+  cardioCueSchedule,
   expectedCardioDistance,
   cardioDistanceDifference,
   finishCardio,
@@ -107,6 +108,20 @@ test('aviso ocorre uma vez perto da troca de velocidade, somente em execução',
   assert.equal(cardioCueBoundary(run, t0 + 117_000), 1);
 });
 
+test('agenda avisos futuros no tempo real e cancela ao pausar ou concluir', () => {
+  const t0 = Date.parse('2026-09-28T10:00:00.000Z');
+  const run = resumeCardio(startCardio(hiit()), t0);
+  assert.deepEqual(cardioCueSchedule(run, t0), {
+    delaysMs: [57_000, 117_000],
+    durationMs: 150_000,
+  });
+  assert.deepEqual(cardioCueSchedule(run, t0 + 58_000), {
+    delaysMs: [59_000],
+    durationMs: 92_000,
+  });
+  assert.equal(cardioCueSchedule(pauseCardio(run, t0 + 58_000), t0 + 60_000), null);
+  assert.equal(cardioCueSchedule(run, t0 + 150_000), null);
+});
 test('modo cardio troca etapa no limite, pausa sem avançar e retoma pelo tempo real', () => {
   const routine = hiit();
   const initial = startCardio(routine);
