@@ -312,7 +312,9 @@ export const s = StyleSheet.create({
     paddingVertical: 10,
   },
   navItem: { flex: 1, gap: 5, alignItems: 'center', minHeight: 56 },
-  navIcon: { paddingVertical: 7, paddingHorizontal: 22, borderRadius: 14 },
+  navIcon: { paddingVertical: 7, paddingHorizontal: 22, borderRadius: 14, overflow: 'hidden' },
+  // Keep the Android background geometry fixed when switching tabs.
+  navHighlight: { ...StyleSheet.absoluteFill, backgroundColor: c.lime, borderRadius: 14 },
   navLabel: { fontSize: 11, color: c.muted },
   back: {
     alignSelf: 'flex-start',

@@ -1692,16 +1692,21 @@ function Ritmo() {
                 onPress={() => setRoute({ page: item.page })}
                 style={s.navItem}
               >
-                <View
-                  style={[
-                    s.navIcon,
-                    (['routine-detail', 'division-detail'].includes(route.page)
-                      ? 'routines'
-                      : route.page) === item.page && {
-                      backgroundColor: c.lime,
-                    },
-                  ]}
-                >
+                <View style={s.navIcon}>
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      s.navHighlight,
+                      {
+                        opacity:
+                          (['routine-detail', 'division-detail'].includes(route.page)
+                            ? 'routines'
+                            : route.page) === item.page
+                            ? 1
+                            : 0,
+                      },
+                    ]}
+                  />
                   <Icon
                     name={item.icon}
                     color={
