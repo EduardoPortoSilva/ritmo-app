@@ -747,16 +747,20 @@ export function WorkoutScreen({
           {(suggestDecrease || suggestIncrease) && (
             <AutomaticLoadHint adjustment={suggestDecrease ? 'decrease' : 'increase'} />
           )}
-          <View style={s.setRow}>
-            <Text style={[s.tableHeading, { width: 36 }]}>SÉRIE</Text>
-            <Text style={[s.tableHeading, { flex: 1 }]}>REPS</Text>
-            <Text style={[s.tableHeading, { flex: 1 }]}>KG</Text>
-            <Text style={[s.tableHeading, { width: 44, textAlign: 'center' }]}>FEITO</Text>
+          <View style={[s.setRow, { paddingHorizontal: 8 }]}>
+            <Text style={[s.tableHeading, { width: 28, textAlign: 'center' }]}>SÉRIE</Text>
+            <Text style={[s.tableHeading, { flex: 1, textAlign: 'center' }]}>REPS</Text>
+            <Text style={[s.tableHeading, { flex: 1, textAlign: 'center' }]}>KG</Text>
+            <Text style={[s.tableHeading, { width: 46, textAlign: 'center' }]}>FEITO</Text>
           </View>
           {exercise.sets.map((set, i) => (
             <View key={set.id}>
-              <View style={[s.setRow, { alignItems: 'flex-start' }, set.done && s.completedRow]}>
-                <Text style={[s.setIndex, { width: 36, paddingTop: 14 }]}>
+              <View style={[s.setRow, s.setEntry]}>
+                <View
+                  pointerEvents="none"
+                  style={[s.completedRow, { opacity: set.done ? 1 : 0 }]}
+                />
+                <Text style={[s.setIndex, { width: 28, textAlign: 'center' }]}>
                   {String(i + 1).padStart(2, '0')}
                 </Text>
                 <View style={{ flex: 1 }}>
@@ -795,13 +799,17 @@ export function WorkoutScreen({
                     }
                     patch(exercise.id, set.id, { done: !set.done });
                   }}
-                  style={[s.check, set.done && { backgroundColor: c.dark, borderColor: c.dark }]}
+                  style={s.check}
                 >
+                  <View
+                    pointerEvents="none"
+                    style={[s.checkHighlight, { opacity: set.done ? 1 : 0 }]}
+                  />
                   <Icon name="check" color={set.done ? c.lime : c.muted} size={19} />
                 </Pressable>
               </View>
               <View
-                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingLeft: 48 }}
+                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingLeft: 44 }}
                 testID={`set-comparison-${i + 1}`}
               >
                 <Text style={[s.small, { fontSize: 11 }]}>meta: {set.target}</Text>
