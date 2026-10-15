@@ -26,16 +26,16 @@ test('redução automática por duas sessões e exclusão de impedimento externo
   }, database);
   await page.goto('/');
   await page.getByRole('button', { name: 'Continuar treino', exact: true }).click();
-  await expect(page.getByTestId('load-reduction-hint')).toContainText(
-    'mais da metade das séries ficou abaixo de metade da meta',
-  );
+  await expect(
+    page.getByTestId('exercise-feedback-status').getByTestId('load-reduction-hint'),
+  ).toBeVisible();
   await expect(
     page.getByRole('img', { name: 'Sugestão do app: Diminuir carga', exact: true }),
   ).toBeVisible();
   await expect(page.getByTestId('load-progression-hint')).toHaveCount(0);
   await expect(page.getByLabel('Supino série 1 carga em kg', { exact: true })).toHaveValue('20');
   await page.screenshot({
-    path: 'test-results/treino-reducao-automatica-20261013.png',
+    path: 'test-results/treino-reducao-compacta-20261014.png',
     animations: 'disabled',
   });
   const withExternal = structuredClone(database);

@@ -71,15 +71,23 @@ function FeedbackSymbol({ kind }: { kind: FeedbackKind }) {
 export function ExerciseFeedbackStatus({
   exercise,
   previous = false,
+  suggestedAdjustment,
 }: {
   exercise?: LoggedExercise;
   previous?: boolean;
+  suggestedAdjustment?: Extract<LoadAdjustment, 'increase' | 'decrease'>;
 }) {
-  if (!exercise?.loadAdjustment && !exercise?.cramp && !exercise?.externalImpediment) return null;
+  if (
+    !exercise?.loadAdjustment &&
+    !exercise?.cramp &&
+    !exercise?.externalImpediment &&
+    !suggestedAdjustment
+  )
+    return null;
   const kinds: FeedbackKind[] = [
-    ...(exercise.loadAdjustment ? [exercise.loadAdjustment] : []),
-    ...(exercise.cramp ? ['cramp' as const] : []),
-    ...(exercise.externalImpediment ? ['external' as const] : []),
+    ...(exercise?.loadAdjustment ? [exercise.loadAdjustment] : []),
+    ...(exercise?.cramp ? ['cramp' as const] : []),
+    ...(exercise?.externalImpediment ? ['external' as const] : []),
   ];
   return (
     <View
@@ -106,6 +114,7 @@ export function ExerciseFeedbackStatus({
           <FeedbackSymbol kind={kind} />
         </View>
       ))}
+      {suggestedAdjustment && <AutomaticLoadHint adjustment={suggestedAdjustment} />}
     </View>
   );
 }
@@ -119,35 +128,28 @@ export function AutomaticLoadHint({
   const color = decrease ? '#FF3038' : '#168447';
   return (
     <View
-      style={[
-        s.row,
-        { backgroundColor: decrease ? '#FFF0F1' : '#E8F7EE', borderRadius: 10, padding: 10 },
-      ]}
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={`Sugestão do app: ${loadAdjustments[adjustment]}`}
+      style={{
+        width: 40,
+        height: 40,
+        backgroundColor: decrease ? '#FFF0F1' : '#E8F7EE',
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
       testID={decrease ? 'load-reduction-hint' : 'load-progression-hint'}
     >
-      <View
-        accessible
-        accessibilityRole="image"
-        accessibilityLabel={`Sugestão do app: ${loadAdjustments[adjustment]}`}
-      >
-        <Svg width={24} height={24} viewBox="0 0 24 24" accessible={false}>
-          <Path
-            d={decrease ? 'M3 5H21L12 21Z' : 'M12 3L21 19H3Z'}
-            fill={color}
-            stroke={color}
-            strokeWidth={1}
-            strokeLinejoin="round"
-          />
-        </Svg>
-      </View>
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={[s.fieldLabel, { color: decrease ? c.danger : c.dark }]}>Sugestão do app</Text>
-        <Text style={s.small}>
-          {decrease
-            ? 'Parece que está na hora de diminuir a carga: nos últimos dois treinos, mais da metade das séries ficou abaixo de metade da meta.'
-            : 'Parece que está na hora de progredir a carga: você atingiu as metas com os mesmos pesos nos últimos dois treinos.'}
-        </Text>
-      </View>
+      <Svg width={24} height={24} viewBox="0 0 24 24" accessible={false}>
+        <Path
+          d={decrease ? 'M3 5H21L12 21Z' : 'M12 3L21 19H3Z'}
+          fill={color}
+          stroke={color}
+          strokeWidth={1}
+          strokeLinejoin="round"
+        />
+      </Svg>
     </View>
   );
 }

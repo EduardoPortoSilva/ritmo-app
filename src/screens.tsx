@@ -30,11 +30,7 @@ import type { EffortRecord } from './effort';
 import { colors as c } from './theme';
 import { WorkoutHistoryModal } from './WorkoutHistoryModal';
 import { ExerciseNoteModal } from './ExerciseNoteModal';
-import {
-  AutomaticLoadHint,
-  ExerciseFeedbackControls,
-  ExerciseFeedbackStatus,
-} from './ExerciseFeedback';
+import { ExerciseFeedbackControls, ExerciseFeedbackStatus } from './ExerciseFeedback';
 import { MusclePicker, MuscleLinksSummary } from './MusclePicker';
 import { ExerciseMuscleModal } from './ExerciseMuscleModal';
 import {
@@ -745,7 +741,13 @@ export function WorkoutScreen({
               onPress={() => setMusclePreviewId(exercise.id)}
             />
           </View>
-          <ExerciseFeedbackStatus exercise={previousExercise} previous />
+          <ExerciseFeedbackStatus
+            exercise={previousExercise}
+            previous
+            suggestedAdjustment={
+              suggestDecrease ? 'decrease' : suggestIncrease ? 'increase' : undefined
+            }
+          />
           <View style={s.sectionHeader} testID="exercise-note-summary">
             <Text style={[s.small, { flex: 1 }]}>
               {exercise.note?.trim() ? `Observações: ${exercise.note}` : 'Adicionar observação'}
@@ -759,9 +761,6 @@ export function WorkoutScreen({
               }}
             />
           </View>
-          {(suggestDecrease || suggestIncrease) && (
-            <AutomaticLoadHint adjustment={suggestDecrease ? 'decrease' : 'increase'} />
-          )}
           <View style={[s.setRow, { paddingHorizontal: 8 }]}>
             <Text style={[s.tableHeading, { width: 28, textAlign: 'center' }]}>SÉRIE</Text>
             <Text style={[s.tableHeading, { flex: 1, textAlign: 'center' }]}>REPS</Text>

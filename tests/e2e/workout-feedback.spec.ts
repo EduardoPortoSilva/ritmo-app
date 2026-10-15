@@ -170,15 +170,15 @@ test('ícone de progressão aparece após duas sessões completas com a mesma ca
   );
   await page.goto('/');
   await page.getByRole('button', { name: 'Continuar treino', exact: true }).click();
-  await expect(page.getByTestId('load-progression-hint')).toContainText(
-    'Parece que está na hora de progredir a carga',
-  );
+  await expect(
+    page.getByTestId('exercise-feedback-status').getByTestId('load-progression-hint'),
+  ).toBeVisible();
   await expect(
     page.getByRole('img', { name: 'Sugestão do app: Aumentar carga', exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel('Supino série 1 carga em kg', { exact: true })).toHaveValue('10');
   await page.screenshot({
-    path: 'test-results/treino-progressao-20261013.png',
+    path: 'test-results/treino-progressao-compacta-20261014.png',
     fullPage: true,
     animations: 'disabled',
   });
