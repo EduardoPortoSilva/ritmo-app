@@ -132,7 +132,7 @@ Leia [modelo de dados](docs/DADOS.md), [backup](docs/BACKUP-E-ASSINATURA.md) e [
 
 O [índice de documentação](docs/README.md) reúne o guia de uso, arquitetura, regras, testes, cardio, músculos, importação e publicação no Git. Para contribuir, leia [CONTRIBUTING.md](CONTRIBUTING.md) e [AGENTS.md](AGENTS.md).
 
-Versão do app: **1.0.5**, Android `versionCode` **14**. [Estado e validação](docs/ESTADO.md) separa as verificações atuais das evidências históricas. APKs e relatórios locais não acompanham automaticamente um clone do código.
+Versão do app: **1.0.5**, Android `versionCode` **15**. [Estado e validação](docs/ESTADO.md) separa as verificações atuais das evidências históricas. APKs e relatórios locais não acompanham automaticamente um clone do código.
 
 ## Licença
 

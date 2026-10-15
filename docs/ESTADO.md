@@ -4,17 +4,25 @@ Referência: **14/10/2026**. O código continua sendo a fonte de verdade. Result
 
 ## Código atual
 
-Aplicativo `com.ritmo.treinos`, versão **1.0.5**, Android `versionCode` **14**. Base instalada registrada no lockfile: Expo **57.0.28**, React Native **0.86.3**, React **19.2.3**. Android é a plataforma principal; web facilita desenvolvimento/testes; iOS não foi validado.
+Aplicativo `com.ritmo.treinos`, versão **1.0.5**, Android `versionCode` **15**. Base instalada registrada no lockfile: Expo **57.0.28**, React Native **0.86.3**, React **19.2.3**. Android é a plataforma principal; web facilita desenvolvimento/testes; iOS não foi validado.
 
 Implementados: força com divisões/conjuntos e pausa do planejamento, programação semanal, séries e descansos individuais, retomada de sessão, histórico e gráficos, peso corporal, vínculos/mapa muscular, cardio por etapas com distância, suplementos diários, widgets/lembretes Android, importação `ritmo/1` e backup completo `ritmo-backup/1`.
 
-## Código atual instalado no Pixel 7 (2) — build 14, 14/10/2026
+## Sugestões compactas instaladas no Pixel 7 (2) — build 15, 14/10/2026
+
+APK release recompilado com JDK 17/SDK 36 para ARM64 e x86_64, incluindo as sugestões automáticas de carga como ícones de 40 × 40 ao lado de **Último treino**, com nomes acessíveis e sem cartão explicativo. Os cinco arquivos de interface conferidos no mapa do bundle Android corresponderam exatamente às fontes atuais.
+
+Validação desta entrega: TypeScript, **66 testes Node**, **33 fluxos Playwright** e Gradle release aprovados. Assinatura válida com o mesmo certificado SHA-256 `d0464b3181984648839196b9e094c00f8cc8a90d8cab873870a0a4f900a91070`; manifesto com `allowBackup=false`. Atualização build 14 → 15 por `adb install -r` no **Pixel_7_2** (`emulator-5554`), seguida de retomada do treino e conferência visual/acessível da sugestão compacta de aumentar carga. O JSON persistido permaneceu exatamente igual ao anterior à atualização, com uma rotina, 14 sessões históricas e treino ativo. Nenhum registro foi criado ou alterado no AVD. Sem novos ensaios de avisos nativos ou testes em aparelho físico.
+
+APK atual: `../entrega/ritmo-android.apk`, **50.251.548 bytes**, SHA-256 `2f0f83d9f820bd68fa8dfdc87077f5592941f60cd1291d593717779499352aa1`. Cópia conferida e `SHA256SUMS.txt` atualizado; build 14 preservado em `../entrega/ritmo-android-20261014-383d5093.apk`. Evidências em `.tools/install-pixel7-build15-20261014/`.
+
+## Código instalado no Pixel 7 (2) — build 14, 14/10/2026
 
 APK release recompilado com JDK 17/SDK 36 para ARM64 e x86_64, incorporando as alterações locais de interface: cabeçalho compacto do treino, alinhamento das séries, geometria estável dos destaques, aviso compacto de descanso em outro exercício, cartão recolhível **Algum ponto importante?** e distância estimada acumulada do cardio. Os cinco arquivos de interface alterados foram comparados com o conteúdo do mapa do bundle Android e corresponderam exatamente ao código atual.
 
 Validação desta entrega: TypeScript, **66 testes Node**, **33 fluxos Playwright** e Gradle release aprovados. Assinatura válida com o mesmo certificado SHA-256 `d0464b3181984648839196b9e094c00f8cc8a90d8cab873870a0a4f900a91070`. Atualização por `adb install -r` no **Pixel_7_2** (`emulator-5554`) confirmada como build 14. No Android, retomada a sessão existente e conferidas abertura/recolhimento do cartão de lembretes; o JSON persistido permaneceu exatamente igual, com uma rotina, 14 sessões históricas e treino ativo. Não foram criados novos registros no AVD do usuário. A distância do cardio foi validada na web, sem iniciar uma sessão no AVD. Não foram repetidos ensaios dos avisos nativos ou testes em aparelho físico.
 
-APK atual: `../entrega/ritmo-android.apk`, **50.252.228 bytes**, SHA-256 `383d50937a8c7ecca3fd5af7ce2d99911a5a5d627cefdcabb652e213c0fc462f`. Cópia conferida e `SHA256SUMS.txt` atualizado; build 13 preservado em `../entrega/ritmo-android-20261014-6146db78.apk`. Logs, capturas, conferência das fontes e comparação do banco em `.tools/install-pixel7-20261014/`.
+APK daquela entrega, agora arquivado em `../entrega/ritmo-android-20261014-383d5093.apk`: **50.252.228 bytes**, SHA-256 `383d50937a8c7ecca3fd5af7ce2d99911a5a5d627cefdcabb652e213c0fc462f`. Build 13 preservado em `../entrega/ritmo-android-20261014-6146db78.apk`. Logs, capturas, conferência das fontes e comparação do banco em `.tools/install-pixel7-20261014/`.
 
 ## Entrega após a reauditoria — build 13, 14/10/2026
 
