@@ -255,6 +255,7 @@ export function CardioPlayer({
     void cuePlayer.seekTo(0).then(() => cuePlayer.play());
   }, [now, run.runningSince, cuePlayer]);
   const progress = cardioProgress(run, now);
+  const estimatedDistance = expectedCardioDistance(run.steps, progress.elapsedMs);
   const current = run.steps[progress.index];
   const next = run.steps[progress.index + 1];
   const running = !!run.runningSince && !progress.complete;
@@ -298,6 +299,19 @@ export function CardioPlayer({
             {formatCardioTime(progress.remainingSeconds)}
           </Text>
         )}
+        <Text
+          testID="cardio-distance"
+          style={{ color: c.paper, fontSize: 20, fontWeight: '700', textAlign: 'center' }}
+        >
+          <Text style={[s.small, { color: '#C7D7C9', fontWeight: '400' }]}>
+            Distância estimada:{' '}
+          </Text>
+          {estimatedDistance.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}{' '}
+          km
+        </Text>
         {!progress.complete && (
           <View style={{ alignSelf: 'stretch', marginTop: 10 }}>
             {running ? (

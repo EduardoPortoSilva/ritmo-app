@@ -1,4 +1,60 @@
 import { expect, test } from '@playwright/test';
+import { emptyDatabase } from '../../src/model';
+import { newCardioRoutine, startCardio } from '../../src/cardio';
+
+test('distância estimada acumula por etapa e preserva pausa, retomada e limite do cardio', async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date('2026-10-14T12:00:00') });
+  const routine = newCardioRoutine();
+  routine.name = 'Distância por etapa';
+  routine.steps = [
+    { id: 'walking', minutes: '1', speed: '6' },
+    { id: 'running', minutes: '1', speed: '12' },
+  ];
+  await page.addInitScript(
+    (database) => {
+      if (!localStorage.getItem('@ritmo/database/v1'))
+        localStorage.setItem('@ritmo/database/v1', JSON.stringify(database));
+    },
+    { ...emptyDatabase(), cardioRoutines: [routine], activeCardio: startCardio(routine) },
+  );
+  await page.goto('/');
+  await page
+    .getByRole('button', { name: 'Continuar cardio: Distância por etapa', exact: true })
+    .click();
+  const distance = page.getByTestId('cardio-distance');
+  await expect(distance).toHaveText('Distância estimada: 0,00 km');
+  await page.getByRole('button', { name: 'Iniciar cardio agora', exact: true }).click();
+  await page.clock.fastForward(1000);
+  await expect(distance).toHaveText('Distância estimada: 0,00 km');
+  await page.clock.fastForward(3000);
+  await expect(distance).toHaveText('Distância estimada: 0,01 km');
+  await page.clock.fastForward(56_000);
+  await expect(page.getByTestId('cardio-speed')).toHaveText('12');
+  await expect(distance).toHaveText('Distância estimada: 0,10 km');
+  await page.clock.fastForward(15_000);
+  await expect(distance).toHaveText('Distância estimada: 0,15 km');
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await distance.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `test-results/cardio-distance-20261014-${width}.png` });
+  }
+  await page.getByRole('button', { name: 'Pausar cardio', exact: true }).click();
+  await page.clock.fastForward(45_000);
+  await expect(distance).toHaveText('Distância estimada: 0,15 km');
+  await page.reload();
+  await page
+    .getByRole('button', { name: 'Continuar cardio: Distância por etapa', exact: true })
+    .click();
+  await expect(distance).toHaveText('Distância estimada: 0,15 km');
+  await page.getByRole('button', { name: 'Retomar cardio', exact: true }).click();
+  await page.clock.fastForward(45_000);
+  await expect(page.getByText('CARDIO CONCLUÍDO', { exact: true })).toBeVisible();
+  await expect(distance).toHaveText('Distância estimada: 0,30 km');
+  await page.clock.fastForward(60_000);
+  await expect(distance).toHaveText('Distância estimada: 0,30 km');
+});
 
 test('cardio semanal troca velocidades, pausa e retoma após reabrir o app', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-09-28T12:00:00') });
