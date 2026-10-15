@@ -652,11 +652,25 @@ export function WorkoutScreen({
   }
   return (
     <ScrollView ref={scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-      <PageHeader
-        title={workout.name}
-        subtitle="Seu treino está em andamento. Vamos nessa."
-        onBack={onBack}
-      />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }} testID="workout-header">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Voltar"
+          onPress={onBack}
+          style={s.back}
+        >
+          <Icon name="arrow-left" size={18} />
+          <Text style={s.link}>Voltar</Text>
+        </Pressable>
+        <Text
+          accessibilityRole="header"
+          accessibilityLabel={workout.name}
+          numberOfLines={1}
+          style={{ flex: 1, fontSize: 14, fontWeight: '600', color: c.muted }}
+        >
+          {workout.name}
+        </Text>
+      </View>
       <View style={{ gap: 8 }}>
         <View style={s.sectionHeader}>
           <Text style={s.fieldLabel}>Um passo de cada vez</Text>
