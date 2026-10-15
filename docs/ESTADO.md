@@ -4,9 +4,17 @@ Referência: **14/10/2026**. O código continua sendo a fonte de verdade. Result
 
 ## Código atual
 
-Aplicativo `com.ritmo.treinos`, versão **1.0.5**, Android `versionCode` **13**. Base instalada registrada no lockfile: Expo **57.0.28**, React Native **0.86.3**, React **19.2.3**. Android é a plataforma principal; web facilita desenvolvimento/testes; iOS não foi validado.
+Aplicativo `com.ritmo.treinos`, versão **1.0.5**, Android `versionCode` **14**. Base instalada registrada no lockfile: Expo **57.0.28**, React Native **0.86.3**, React **19.2.3**. Android é a plataforma principal; web facilita desenvolvimento/testes; iOS não foi validado.
 
 Implementados: força com divisões/conjuntos e pausa do planejamento, programação semanal, séries e descansos individuais, retomada de sessão, histórico e gráficos, peso corporal, vínculos/mapa muscular, cardio por etapas com distância, suplementos diários, widgets/lembretes Android, importação `ritmo/1` e backup completo `ritmo-backup/1`.
+
+## Código atual instalado no Pixel 7 (2) — build 14, 14/10/2026
+
+APK release recompilado com JDK 17/SDK 36 para ARM64 e x86_64, incorporando as alterações locais de interface: cabeçalho compacto do treino, alinhamento das séries, geometria estável dos destaques, aviso compacto de descanso em outro exercício, cartão recolhível **Algum ponto importante?** e distância estimada acumulada do cardio. Os cinco arquivos de interface alterados foram comparados com o conteúdo do mapa do bundle Android e corresponderam exatamente ao código atual.
+
+Validação desta entrega: TypeScript, **66 testes Node**, **33 fluxos Playwright** e Gradle release aprovados. Assinatura válida com o mesmo certificado SHA-256 `d0464b3181984648839196b9e094c00f8cc8a90d8cab873870a0a4f900a91070`. Atualização por `adb install -r` no **Pixel_7_2** (`emulator-5554`) confirmada como build 14. No Android, retomada a sessão existente e conferidas abertura/recolhimento do cartão de lembretes; o JSON persistido permaneceu exatamente igual, com uma rotina, 14 sessões históricas e treino ativo. Não foram criados novos registros no AVD do usuário. A distância do cardio foi validada na web, sem iniciar uma sessão no AVD. Não foram repetidos ensaios dos avisos nativos ou testes em aparelho físico.
+
+APK atual: `../entrega/ritmo-android.apk`, **50.252.228 bytes**, SHA-256 `383d50937a8c7ecca3fd5af7ce2d99911a5a5d627cefdcabb652e213c0fc462f`. Cópia conferida e `SHA256SUMS.txt` atualizado; build 13 preservado em `../entrega/ritmo-android-20261014-6146db78.apk`. Logs, capturas, conferência das fontes e comparação do banco em `.tools/install-pixel7-20261014/`.
 
 ## Entrega após a reauditoria — build 13, 14/10/2026
 
@@ -18,7 +26,7 @@ Ainda no build 13, descanso de 10 s iniciado pela interface registrou início e 
 
 A reauditoria anterior desta mesma data passou em TypeScript, **66 testes Node**, **32 fluxos Playwright**, **14 testes JVM**, Expo Doctor **21/21**, 261 mutações de entradas e cenários extras de rollback. Assinaturas de 516 pacotes npm e 125 atestações foram verificadas. Permanecem 15 ocorrências altas transitivas das ferramentas de build (`braces`/`node-forge`), sem novas falhas encontradas no código. Evidências da auditoria em `.tools/security-reaudit-2026-10-14/`; da entrega nativa em `.tools/release-build13-2026-10-14/`.
 
-APK atual: `../entrega/ritmo-android.apk`, **50.250.632 bytes**, SHA-256 `6146db785cc7a78e9d4f63ca7f9b65d1c230296954e95c50e946b2975e0283ea`; cópia conferida e `SHA256SUMS.txt` atualizado. O build 12 foi preservado em `../entrega/ritmo-android-20261013-877eeb4e.apk`. Não houve instalação em aparelho físico ou atualização do emulador do usuário.
+APK daquela entrega, agora arquivado em `../entrega/ritmo-android-20261014-6146db78.apk`: **50.250.632 bytes**, SHA-256 `6146db785cc7a78e9d4f63ca7f9b65d1c230296954e95c50e946b2975e0283ea`. O build 12 foi preservado em `../entrega/ritmo-android-20261013-877eeb4e.apk`. Não houve instalação em aparelho físico ou atualização do emulador do usuário durante aquela entrega.
 
 ## Correção da auditoria de segurança — código, 14/10/2026
 
