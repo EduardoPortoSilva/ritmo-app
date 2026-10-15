@@ -66,10 +66,27 @@ test('aviso de descanso permite voltar ao exercício durante outro exercício', 
   await page.getByRole('button', { name: 'Iniciar treino', exact: true }).click();
   await page.getByRole('button', { name: 'Iniciar descanso de Supino série 1' }).click();
   await page.getByRole('button', { name: 'Próximo' }).click();
-  await expect(page.getByTestId('rest-other-exercise')).toContainText('Supino');
-  await page.getByTestId('rest-other-exercise').scrollIntoViewIfNeeded();
-  await page.screenshot({ path: 'test-results/descanso-voltar-exercicio.png' });
-  await page.getByRole('button', { name: 'Voltar ao exercício' }).click();
+  const notice = page.getByTestId('rest-other-exercise');
+  const back = notice.getByRole('button', { name: 'Voltar ao exercício', exact: true });
+  const pause = notice.getByRole('button', { name: 'Pausar descanso', exact: true });
+  await expect(notice).toContainText('Supino');
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await notice.scrollIntoViewIfNeeded();
+    const backBox = await back.boundingBox();
+    const pauseBox = await pause.boundingBox();
+    const noticeBox = await notice.boundingBox();
+    expect(backBox!.y + backBox!.height).toBeLessThanOrEqual(pauseBox!.y);
+    expect(backBox!.x).toBeCloseTo(pauseBox!.x, 1);
+    expect(backBox!.width).toBeGreaterThanOrEqual(44);
+    expect(pauseBox!.height).toBeGreaterThanOrEqual(44);
+    expect(noticeBox!.height).toBeLessThanOrEqual(112);
+    await page.screenshot({ path: `test-results/descanso-compacto-20261014-${width}.png` });
+  }
+  await pause.click();
+  await notice.getByRole('button', { name: 'Retomar descanso', exact: true }).click();
+  await expect(pause).toBeVisible();
+  await back.click();
   await expect(page.getByText('Exercício 1 de 2')).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Pausar descanso de Supino série 1' }),

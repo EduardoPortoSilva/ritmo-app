@@ -671,17 +671,18 @@ export function WorkoutScreen({
         </View>
       </View>
       {restTimer && restTimer.exerciseId !== exercise?.id && restLeft > 0 && (
-        <View style={s.noteCard} testID="rest-other-exercise">
-          <View style={{ flex: 1, gap: 8 }}>
+        <View style={[s.noteCard, { padding: 12, gap: 12 }]} testID="rest-other-exercise">
+          <View style={{ flex: 1, gap: 4 }}>
             <Text style={s.fieldLabel}>Descanso em andamento</Text>
             <Text style={s.small}>
               {restingExercise?.name} · série {(restingSetIndex ?? 0) + 1} ·{' '}
               {formatRestRemaining(restLeft)} restantes
             </Text>
-            <Button
+          </View>
+          <View style={{ alignItems: 'center' }}>
+            <IconButton
               label="Voltar ao exercício"
-              secondary
-              icon="arrow-left"
+              name="arrow-left"
               onPress={() => {
                 const index = workout.exercises.findIndex(
                   (item) => item.id === restTimer.exerciseId,
@@ -689,15 +690,15 @@ export function WorkoutScreen({
                 if (index >= 0) navigateExercise(index);
               }}
             />
+            <IconButton
+              name={restTimer.runningSince === null ? 'play' : 'pause'}
+              label={restTimer.runningSince === null ? 'Retomar descanso' : 'Pausar descanso'}
+              onPress={() => {
+                const seconds = restTimer.durationMs / 1000;
+                toggleRest(restTimer.exerciseId, restTimer.setId, seconds);
+              }}
+            />
           </View>
-          <IconButton
-            name={restTimer.runningSince === null ? 'play' : 'pause'}
-            label={restTimer.runningSince === null ? 'Retomar descanso' : 'Pausar descanso'}
-            onPress={() => {
-              const seconds = restTimer.durationMs / 1000;
-              toggleRest(restTimer.exerciseId, restTimer.setId, seconds);
-            }}
-          />
         </View>
       )}
       {exercise && (
