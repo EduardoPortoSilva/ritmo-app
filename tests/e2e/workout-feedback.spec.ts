@@ -45,6 +45,13 @@ test('lembretes por exercício, comparação por série e retomada até a próxi
   expect(statusBounds!.y + statusBounds!.height).toBeLessThan(firstSetBounds!.y);
   await expect(page.getByTestId('load-progression-hint')).toHaveCount(0);
   await expect(page.getByTestId('workout-history-modal')).toHaveCount(0);
+  const feedbackToggle = page.getByRole('button', { name: 'Algum ponto importante?', exact: true });
+  await expect(feedbackToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByTestId('exercise-feedback-content')).toHaveCount(0);
+  await feedbackToggle.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/treino-lembretes-recolhidos-20261014.png' });
+  await feedbackToggle.click();
+  await expect(feedbackToggle).toHaveAttribute('aria-expanded', 'true');
   const increase = page.getByRole('checkbox', { name: 'Aumentar carga para Supino', exact: true });
   const maintain = page.getByRole('checkbox', { name: 'Manter carga para Supino', exact: true });
   const decrease = page.getByRole('checkbox', { name: 'Diminuir carga para Supino', exact: true });
@@ -63,17 +70,27 @@ test('lembretes por exercício, comparação por série e retomada até a próxi
   await decrease.click();
   await cramp.click();
   await external.click();
+  await feedbackToggle.click();
+  await expect(page.getByTestId('exercise-feedback-content')).toHaveCount(0);
+  await feedbackToggle.click();
+  await expect(decrease).toBeChecked();
+  await expect(cramp).toBeChecked();
+  await expect(external).toBeChecked();
   await page.getByRole('checkbox', { name: 'Concluir Supino série 1', exact: true }).click();
   await page.getByRole('button', { name: 'Próximo', exact: true }).click();
   await expect(page.getByTestId('exercise-feedback-status')).toHaveCount(0);
+  await expect(feedbackToggle).toHaveAttribute('aria-expanded', 'false');
+  await feedbackToggle.click();
   await page.getByRole('checkbox', { name: 'Aumentar carga para Remada', exact: true }).click();
   await page.getByRole('button', { name: 'Anterior', exact: true }).click();
+  await expect(feedbackToggle).toHaveAttribute('aria-expanded', 'false');
+  await feedbackToggle.click();
   await expect(decrease).toBeChecked();
   await expect(cramp).toBeChecked();
   await expect(external).toBeChecked();
   await page.getByTestId('exercise-feedback-controls').scrollIntoViewIfNeeded();
   await page.screenshot({
-    path: 'test-results/treino-modificadores-20261013.png',
+    path: 'test-results/treino-lembretes-expandidos-20261014.png',
     animations: 'disabled',
   });
   await expect(
@@ -90,6 +107,8 @@ test('lembretes por exercício, comparação por série e retomada até a próxi
     .toBe('decrease');
   await page.reload();
   await page.getByRole('button', { name: 'Continuar treino', exact: true }).click();
+  await expect(feedbackToggle).toHaveAttribute('aria-expanded', 'false');
+  await feedbackToggle.click();
   await expect(decrease).toBeChecked();
   await expect(cramp).toBeChecked();
   await expect(external).toBeChecked();
@@ -112,6 +131,7 @@ test('lembretes por exercício, comparação por série e retomada até a próxi
     page.getByRole('img', { name: 'Último treino: Diminuir carga', exact: true }),
   ).toHaveCount(1);
   await expect(page.getByTestId('exercise-feedback-status')).toHaveCount(1);
+  await feedbackToggle.click();
   await expect(decrease).not.toBeChecked();
   await expect(cramp).not.toBeChecked();
   await expect(external).not.toBeChecked();

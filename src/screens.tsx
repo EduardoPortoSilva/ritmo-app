@@ -885,7 +885,13 @@ export function WorkoutScreen({
           </View>
         </View>
       )}
-      {exercise && <ExerciseFeedbackControls exercise={exercise} onChange={patchExercise} />}
+      {exercise && (
+        <ExerciseFeedbackControls
+          key={`feedback-${exercise.id}`}
+          exercise={exercise}
+          onChange={patchExercise}
+        />
+      )}
       <Text style={s.small}>
         Sem carga externa? Registre 0 kg. Alterar uma série desmarca sua conclusão para você
         conferir novamente.

@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { loadAdjustments, type LoggedExercise, type LoadAdjustment } from './model';
-import { s } from './ui';
+import { Icon, s } from './ui';
 import { colors as c } from './theme';
 
 type FeedbackKind = keyof typeof loadAdjustments | 'cramp' | 'external';
@@ -159,6 +159,7 @@ export function ExerciseFeedbackControls({
   exercise: LoggedExercise;
   onChange: (changes: Partial<LoggedExercise>) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const options = Object.entries(loadAdjustments) as [keyof typeof loadAdjustments, string][];
   function choice(label: string, kind: FeedbackKind, selected: boolean, onPress: () => void) {
     return (
@@ -187,31 +188,49 @@ export function ExerciseFeedbackControls({
     );
   }
   return (
-    <View style={s.card} testID="exercise-feedback-controls">
-      <Text style={s.fieldLabel}>Como foi {exercise.name}?</Text>
-      <Text style={s.small}>
-        Marque um lembrete para o próximo treino. Toque novamente para desmarcar.
-      </Text>
-      <Text style={s.small}>
-        Impedimento: cansaço, cãibra ou qualquer dificuldade que tenha atrapalhado o exercício.
-      </Text>
-      <Text style={s.small}>
-        Impedimento externo: falta de tempo, equipamento ocupado ou outra situação externa. Essa
-        sessão não entra nas sugestões automáticas de carga.
-      </Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {options.map(([value, label]) =>
-          choice(label, value, exercise.loadAdjustment === value, () =>
-            onChange({ loadAdjustment: exercise.loadAdjustment === value ? undefined : value }),
-          ),
-        )}
-        {choice('Impedimento', 'cramp', exercise.cramp === true, () =>
-          onChange({ cramp: !exercise.cramp }),
-        )}
-        {choice('Impedimento externo', 'external', exercise.externalImpediment === true, () =>
-          onChange({ externalImpediment: !exercise.externalImpediment }),
-        )}
-      </View>
+    <View style={[s.card, { padding: 0, gap: 0 }]} testID="exercise-feedback-controls">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Algum ponto importante?"
+        accessibilityState={{ expanded }}
+        aria-expanded={expanded}
+        onPress={() => setExpanded((value) => !value)}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18, minHeight: 56 }}
+      >
+        <Text style={[s.fieldLabel, { flex: 1 }]}>Algum ponto importante?</Text>
+        <Icon name={expanded ? 'chevron-up' : 'chevron-down'} color={c.muted} size={20} />
+      </Pressable>
+      {expanded && (
+        <View
+          style={{ paddingHorizontal: 18, paddingBottom: 18, gap: 16 }}
+          testID="exercise-feedback-content"
+        >
+          <Text style={s.fieldLabel}>Como foi {exercise.name}?</Text>
+          <Text style={s.small}>
+            Marque um lembrete para o próximo treino. Toque novamente para desmarcar.
+          </Text>
+          <Text style={s.small}>
+            Impedimento: cansaço, cãibra ou qualquer dificuldade que tenha atrapalhado o exercício.
+          </Text>
+          <Text style={s.small}>
+            Impedimento externo: falta de tempo, equipamento ocupado ou outra situação externa. Essa
+            sessão não entra nas sugestões automáticas de carga.
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {options.map(([value, label]) =>
+              choice(label, value, exercise.loadAdjustment === value, () =>
+                onChange({ loadAdjustment: exercise.loadAdjustment === value ? undefined : value }),
+              ),
+            )}
+            {choice('Impedimento', 'cramp', exercise.cramp === true, () =>
+              onChange({ cramp: !exercise.cramp }),
+            )}
+            {choice('Impedimento externo', 'external', exercise.externalImpediment === true, () =>
+              onChange({ externalImpediment: !exercise.externalImpediment }),
+            )}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
