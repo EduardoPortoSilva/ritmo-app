@@ -12,16 +12,20 @@ import { uid } from './model';
 import { Button, Field, Icon, IconButton, s } from './ui';
 import { EditSheet, FormulaError } from './FormulaFields';
 import { colors as c } from './theme';
+import { IntakeSupplementNotice } from './SupplementLinks';
+import type { Supplement } from './supplements';
 
 type Draft = { id: string; name: string; selected: string[]; amounts: Record<string, string> };
 export function BlendControls({
   items,
   blends,
+  supplements,
   onChange,
   onIngest,
 }: {
   items: Substance[];
   blends: SubstanceBlend[];
+  supplements: Supplement[];
   onChange: (blends: SubstanceBlend[]) => void;
   onIngest: (items: Substance[]) => void;
 }) {
@@ -227,6 +231,11 @@ export function BlendControls({
             Todas as substâncias recebem o mesmo horário. Cada uma mantém seu próprio modelo e
             projeção. A composição fica salva mesmo se você cancelar esta ingestão.
           </Text>
+          <IntakeSupplementNotice
+            supplements={supplements}
+            substanceIds={ingest.components.map((component) => component.substanceId)}
+            blendId={ingest.id}
+          />
           <FormulaError message={error} />
           <Button
             label="Registrar ingestão do blend"

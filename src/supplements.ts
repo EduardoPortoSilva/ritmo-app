@@ -5,6 +5,8 @@ export type Supplement = {
   createdAt: string;
   takenOn: string[];
   reminderTime?: string;
+  substanceIds?: string[];
+  blendIds?: string[];
 };
 
 export function dayKey(date: Date): string {
@@ -18,10 +20,19 @@ export function validDay(value: unknown): value is string {
 export const validReminderTime = (value: unknown): value is string =>
   typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
 
+const validLinks = (value: unknown, max: number): boolean =>
+  value === undefined ||
+  (Array.isArray(value) &&
+    value.length <= max &&
+    value.every((id) => typeof id === 'string' && !!id.trim() && id.length <= 160) &&
+    new Set(value).size === value.length);
+
 export function supplementError(supplement: Supplement): string | null {
   if (!supplement.name.trim()) return 'Informe o nome do suplemento.';
   if (supplement.name.trim().length > 80) return 'Use até 80 caracteres no nome.';
   if (supplement.note.length > 300) return 'Use até 300 caracteres na observação.';
+  if (!validLinks(supplement.substanceIds, 30) || !validLinks(supplement.blendIds, 50))
+    return 'Confira os vínculos de substâncias e blends do suplemento.';
   if (supplement.reminderTime !== undefined && !validReminderTime(supplement.reminderTime))
     return 'Use um horário válido: hora de 00 a 23 e minutos de 00 a 59.';
   return null;

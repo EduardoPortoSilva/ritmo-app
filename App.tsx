@@ -95,6 +95,7 @@ import { backgroundCardioCueAvailable, syncBackgroundCardioCue } from './src/car
 import { requestWidget, widgetAvailable } from './src/widget';
 import { SupplementCard, SupplementEditor } from './src/SupplementScreens';
 import { dayKey, setSupplementTaken, supplementError, type Supplement } from './src/supplements';
+import { markSupplementsForNewDoses } from './src/supplementIntakes';
 import {
   enableNotifications,
   notificationsEnabled,
@@ -763,6 +764,7 @@ function Ritmo() {
             <SubstanceScreen
               items={db.substances ?? []}
               blends={db.substanceBlends ?? []}
+              supplements={supplements}
               onBlendsChange={(substanceBlends) => {
                 const next = { ...dbRef.current, substanceBlends };
                 assertStorableDatabase(JSON.stringify(next));
@@ -772,7 +774,17 @@ function Ritmo() {
               onBulk={() => setRoute({ page: 'formula-bulk', returnTo: 'substances' })}
               onChange={(substances) => {
                 const current = dbRef.current;
-                const next = { ...current, substances };
+                const next = {
+                  ...current,
+                  substances,
+                  ...(current.supplements && {
+                    supplements: markSupplementsForNewDoses(
+                      current.supplements,
+                      current.substances ?? [],
+                      substances,
+                    ),
+                  }),
+                };
                 assertStorableDatabase(JSON.stringify(next));
                 update(next);
               }}
@@ -1009,6 +1021,8 @@ function Ritmo() {
             <SupplementEditor
               key={route.supplement.id}
               initial={route.supplement}
+              substances={db.substances ?? []}
+              blends={db.substanceBlends ?? []}
               onBack={back}
               onSave={saveSupplement}
               onDirtyChange={onDirtyChange}

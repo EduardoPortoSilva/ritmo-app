@@ -7,6 +7,8 @@ import { Button, Field, PageHeader, s } from './ui';
 import { colors as c } from './theme';
 import { formatNumber, uid } from './model';
 import { BlendControls } from './BlendControls';
+import { IntakeSupplementNotice } from './SupplementLinks';
+import type { Supplement } from './supplements';
 import { removeBlendIntake, formatSubstanceQuantity, type SubstanceBlend } from './substanceBlends';
 import { localDate, localTime, doseTime } from './substanceTime';
 import {
@@ -105,6 +107,7 @@ function Projection({ item, now }: { item: Substance; now: number }) {
 export function SubstanceScreen({
   items,
   blends,
+  supplements,
   onBlendsChange,
   onChange,
   onBack,
@@ -112,6 +115,7 @@ export function SubstanceScreen({
 }: {
   items: Substance[];
   blends: SubstanceBlend[];
+  supplements: Supplement[];
   onBlendsChange: (blends: SubstanceBlend[]) => void;
   onChange: (items: Substance[]) => void;
   onBack: () => void;
@@ -175,6 +179,7 @@ export function SubstanceScreen({
       <BlendControls
         items={items}
         blends={blends}
+        supplements={supplements}
         onChange={onBlendsChange}
         onIngest={(next) => {
           onChange(next);
@@ -424,6 +429,7 @@ export function SubstanceScreen({
           <Text style={s.small}>
             Horário local do aparelho. Você pode registrar uma ingestão anterior.
           </Text>
+          <IntakeSupplementNotice supplements={supplements} substanceIds={[ingest.id]} />
           <FormulaError message={error} />
           <Button
             label="Salvar ingestão"

@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { colors as c } from './theme';
 import { KeyboardScrollView as ScrollView } from './KeyboardScrollView';
+import { colors as c } from './theme';
 import { Button, Field, Icon, IconButton, PageHeader, s } from './ui';
 import { dayKey, recentSupplementDays, supplementStreak, type Supplement } from './supplements';
 import { remindersAvailable } from './reminders';
+import { SupplementLinks } from './SupplementLinks';
+import type { Substance } from './substances';
+import type { SubstanceBlend } from './substanceBlendSchema';
 
 export function SupplementCard({
   supplement,
@@ -115,11 +118,15 @@ export function SupplementCard({
 
 export function SupplementEditor({
   initial,
+  substances,
+  blends,
   onBack,
   onSave,
   onDirtyChange,
 }: {
   initial: Supplement;
+  substances: Substance[];
+  blends: SubstanceBlend[];
   onBack: () => void;
   onSave: (supplement: Supplement) => Promise<void>;
   onDirtyChange: (dirty: boolean) => void;
@@ -129,10 +136,28 @@ export function SupplementEditor({
   const [hour, setHour] = useState(initial.reminderTime?.split(':')[0] ?? '08');
   const [minute, setMinute] = useState(initial.reminderTime?.split(':')[1] ?? '00');
   const [saving, setSaving] = useState(false);
+  async function save() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onSave({
+        ...draft,
+        reminderTime: reminder
+          ? `${hour.trim() ? hour.trim().padStart(2, '0') : ''}:${minute.trim() ? minute.trim().padStart(2, '0') : ''}`
+          : undefined,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
   useEffect(() => {
     const time = reminder ? `${hour}:${minute}` : undefined;
     onDirtyChange(
-      draft.name !== initial.name || draft.note !== initial.note || time !== initial.reminderTime,
+      draft.name !== initial.name ||
+        draft.note !== initial.note ||
+        time !== initial.reminderTime ||
+        JSON.stringify(draft.substanceIds ?? []) !== JSON.stringify(initial.substanceIds ?? []) ||
+        JSON.stringify(draft.blendIds ?? []) !== JSON.stringify(initial.blendIds ?? []),
     );
   }, [draft, reminder, hour, minute, initial, onDirtyChange]);
   return (
@@ -157,6 +182,12 @@ export function SupplementEditor({
           onChangeText={(note) => setDraft({ ...draft, note })}
         />
       </View>
+      <SupplementLinks
+        supplement={draft}
+        substances={substances}
+        blends={blends}
+        onChange={setDraft}
+      />
       <View style={s.card}>
         <Text style={s.cardTitle}>Lembrete diário</Text>
         <Pressable
@@ -210,18 +241,8 @@ export function SupplementEditor({
         label={saving ? 'Salvando…' : 'Salvar suplemento'}
         icon="check"
         disabled={saving}
-        onPress={async () => {
-          setSaving(true);
-          try {
-            await onSave({
-              ...draft,
-              reminderTime: reminder
-                ? `${hour.trim() ? hour.trim().padStart(2, '0') : ''}:${minute.trim() ? minute.trim().padStart(2, '0') : ''}`
-                : undefined,
-            });
-          } finally {
-            setSaving(false);
-          }
+        onPress={() => {
+          void save();
         }}
       />
     </ScrollView>
