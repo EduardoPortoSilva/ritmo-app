@@ -1,4 +1,4 @@
-param()
+param([switch]$NoDaemon)
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -21,7 +21,9 @@ $env:NODE_ENV = 'production'
 try {
   Push-Location (Join-Path $projectRoot 'android')
   try {
-    & .\gradlew.bat :app:assembleRelease '-PreactNativeArchitectures=arm64-v8a,x86_64' --console=plain --max-workers=4
+    $gradleArguments = @(':app:assembleRelease', '-PreactNativeArchitectures=arm64-v8a,x86_64', '--console=plain', '--max-workers=4')
+    if ($NoDaemon) { $gradleArguments += '--no-daemon' }
+    & .\gradlew.bat @gradleArguments
     if ($LASTEXITCODE -ne 0) { throw 'Build release falhou.' }
   } finally { Pop-Location }
 } finally {
