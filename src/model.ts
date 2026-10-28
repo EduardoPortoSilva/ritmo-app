@@ -1,4 +1,6 @@
 import { isSupplement, type Supplement } from './supplements.ts';
+import { validSubstance, type Substance } from './substances.ts';
+import { validBlend, type SubstanceBlend } from './substanceBlendSchema.ts';
 import { validMuscleLinks, muscleLinksKey, type MuscleLink } from './muscles.ts';
 import {
   isCardioRoutine,
@@ -66,6 +68,8 @@ export type Workout = {
   exercises: LoggedExercise[];
 };
 export type Database = {
+  substances?: Substance[];
+  substanceBlends?: SubstanceBlend[];
   version: 1;
   routines: Routine[];
   routineSets?: RoutineSet[];
@@ -593,6 +597,16 @@ export function parseDatabase(raw: string): Database {
     uniqueIds(w.exercises);
   if (
     value?.version !== 1 ||
+    (value.substanceBlends !== undefined &&
+      (!Array.isArray(value.substanceBlends) ||
+        value.substanceBlends.length > 50 ||
+        !value.substanceBlends.every(validBlend) ||
+        !uniqueIds(value.substanceBlends))) ||
+    (value.substances !== undefined &&
+      (!Array.isArray(value.substances) ||
+        value.substances.length > 30 ||
+        !value.substances.every(validSubstance) ||
+        !uniqueIds(value.substances))) ||
     !Array.isArray(value.routines) ||
     !value.routines.every(routine) ||
     !uniqueIds(value.routines) ||

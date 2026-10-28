@@ -57,6 +57,8 @@ import {
 } from './src/CardioScreens';
 import { BulkImportScreen } from './src/BulkImportScreen';
 import { BackupScreen } from './src/BackupScreen';
+import { SubstanceScreen } from './src/SubstanceScreen';
+import { assertStorableDatabase } from './src/backupLimits';
 import type { BackupPreview } from './src/backup';
 import { shouldDeferSupplementLink } from './src/navigation';
 import { RoutineSetsScreen } from './src/RoutineSetsScreen';
@@ -134,6 +136,7 @@ type Route =
         | 'bulk-import'
         | 'backup';
     }
+  | { page: 'substances' }
   | { page: 'division-editor'; division: DivisionDraft }
   | { page: 'division-detail'; divisionId: string }
   | { page: 'supplement-editor'; supplement: Supplement }
@@ -265,6 +268,10 @@ function Ritmo() {
   }, [ready]);
   function back() {
     if (restoringRef.current) return;
+    if (route.page === 'substances') {
+      setRoute({ page: 'supplements' });
+      return;
+    }
     if (route.page === 'backup') {
       setRoute({ page: 'routines' });
       return;
@@ -640,6 +647,7 @@ function Ritmo() {
       </SafeAreaView>
     );
   const subpage = [
+    'substances',
     'coverage',
     'cardio',
     'cardio-editor',
@@ -690,7 +698,24 @@ function Ritmo() {
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          {route.page === 'backup' ? (
+          {route.page === 'substances' ? (
+            <SubstanceScreen
+              items={db.substances ?? []}
+              blends={db.substanceBlends ?? []}
+              onBlendsChange={(substanceBlends) => {
+                const next = { ...dbRef.current, substanceBlends };
+                assertStorableDatabase(JSON.stringify(next));
+                update(next);
+              }}
+              onBack={back}
+              onChange={(substances) => {
+                const current = dbRef.current;
+                const next = { ...current, substances };
+                assertStorableDatabase(JSON.stringify(next));
+                update(next);
+              }}
+            />
+          ) : route.page === 'backup' ? (
             <BackupScreen
               database={db}
               onBack={back}
@@ -699,7 +724,7 @@ function Ritmo() {
                 setDialog({
                   title: 'Substituir todos os dados?',
                   message:
-                    'O backup escolhido substituirá rotinas, históricos, cardios, suplementos e sessões em andamento deste aparelho. Essa ação não pode ser desfeita. Confirme que você guardou uma cópia dos dados atuais.',
+                    'O backup escolhido substituirá rotinas, históricos, cardios, suplementos, substâncias, dados para estimativas e sessões em andamento deste aparelho. Essa ação não pode ser desfeita. Confirme que você guardou uma cópia dos dados atuais.',
                   label: 'Restaurar dados',
                   danger: true,
                   onConfirm: () => {
@@ -1321,6 +1346,12 @@ function Ritmo() {
                     <Text style={s.body}>Marque o que tomou hoje e mantenha sua sequência.</Text>
                   </View>
                   <Button label="Novo suplemento" icon="plus" onPress={addSupplement} />
+                  <Button
+                    label="Acompanhar substâncias"
+                    icon="activity"
+                    secondary
+                    onPress={() => setRoute({ page: 'substances' })}
+                  />
                   {remindersAvailable && (
                     <Button
                       label="Adicionar widget de suplementos"

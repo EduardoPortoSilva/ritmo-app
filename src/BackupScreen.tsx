@@ -46,7 +46,8 @@ function readAndroidBackup(uri: string): string {
 
 function countText(database: Database) {
   const count = backupSummary(database);
-  return `${count.routines} ${count.routines === 1 ? 'rotina' : 'rotinas'} de força · ${count.workouts} ${count.workouts === 1 ? 'treino' : 'treinos'} no histórico · ${count.cardioRoutines} ${count.cardioRoutines === 1 ? 'cardio' : 'cardios'} · ${count.cardioHistory} ${count.cardioHistory === 1 ? 'cardio' : 'cardios'} no histórico · ${count.supplements} ${count.supplements === 1 ? 'suplemento' : 'suplementos'}${count.activeWorkout ? ' · treino em andamento' : ''}${count.activeCardio ? ' · cardio em andamento' : ''}`;
+  const extra = `${count.substances ? ` · ${count.substances} substâncias com ${count.substanceDoses} ingestões` : ''}${count.substanceBlends ? ` · ${count.substanceBlends} blends` : ''}`;
+  return `${count.routines} ${count.routines === 1 ? 'rotina' : 'rotinas'} de força · ${count.workouts} ${count.workouts === 1 ? 'treino' : 'treinos'} no histórico · ${count.cardioRoutines} ${count.cardioRoutines === 1 ? 'cardio' : 'cardios'} · ${count.cardioHistory} ${count.cardioHistory === 1 ? 'cardio' : 'cardios'} no histórico · ${count.supplements} ${count.supplements === 1 ? 'suplemento' : 'suplementos'}${count.activeWorkout ? ' · treino em andamento' : ''}${count.activeCardio ? ' · cardio em andamento' : ''}${extra}`;
 }
 
 export function BackupScreen({

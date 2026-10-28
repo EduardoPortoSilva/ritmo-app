@@ -16,6 +16,9 @@ export function backupSummary(database: Database) {
     cardioRoutines: database.cardioRoutines?.length ?? 0,
     cardioHistory: database.cardioHistory?.length ?? 0,
     supplements: database.supplements?.length ?? 0,
+    substances: database.substances?.length ?? 0,
+    substanceBlends: database.substanceBlends?.length ?? 0,
+    substanceDoses: database.substances?.reduce((sum, item) => sum + item.doses.length, 0) ?? 0,
     activeWorkout: !!database.active,
     activeCardio: !!database.activeCardio,
   };
