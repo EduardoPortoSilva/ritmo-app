@@ -708,20 +708,22 @@ function Ritmo() {
     <SafeAreaView style={s.safe}>
       <StatusBar style="dark" />
       <View style={s.shell}>
-        <View style={s.header}>
-          <View style={s.row}>
-            <View style={s.brandIcon}>
-              <Icon name="activity" color={c.lime} size={24} />
+        {route.page !== 'workout' && (
+          <View style={s.header} testID="app-brand-header">
+            <View style={s.row}>
+              <View style={s.brandIcon}>
+                <Icon name="activity" color={c.lime} size={24} />
+              </View>
+              <Text style={s.brand}>
+                ritmo<Text style={{ color: '#6A9347' }}>.</Text>
+              </Text>
             </View>
-            <Text style={s.brand}>
-              ritmo<Text style={{ color: '#6A9347' }}>.</Text>
-            </Text>
+            <View style={s.offlineBadge}>
+              <View style={s.dot} />
+              <Text style={s.offlineText}>SEU ESPAÇO DE TREINO</Text>
+            </View>
           </View>
-          <View style={s.offlineBadge}>
-            <View style={s.dot} />
-            <Text style={s.offlineText}>SEU ESPAÇO DE TREINO</Text>
-          </View>
-        </View>
+        )}
         {saveError && (
           <Pressable
             accessibilityRole="button"

@@ -39,7 +39,14 @@ import { SetComparison, SetExecutionControls, SetExecutionSummary } from './SetE
 import { MusclePicker, MuscleLinksSummary } from './MusclePicker';
 import { ExerciseMuscleModal } from './ExerciseMuscleModal';
 import { EnergyModelControl, EnergySummary } from './EnergyScreens';
+import { CurrentSetCard } from './CurrentSetCard';
 import { validHeight } from './energy';
+import {
+  currentWorkoutSet,
+  exerciseComplete,
+  markLongRestAfterRestart,
+  visibleExerciseIndices,
+} from './workoutFlow';
 import {
   formatRestRemaining,
   pauseRestTimer,
@@ -552,6 +559,7 @@ export function WorkoutScreen({
   onError: (message: string) => void;
 }) {
   const [exerciseIndex, setExerciseIndex] = useState(0);
+  const [hideCompleted, setHideCompleted] = useState(false);
   const [chartOpen, setChartOpen] = useState(false);
   const [noteEditorOpen, setNoteEditorOpen] = useState(false);
   const [expandedSetId, setExpandedSetId] = useState<string | null>(null);
@@ -561,8 +569,24 @@ export function WorkoutScreen({
   const cuePlayer = useAudioPlayer(require('../assets/cardio-cue.wav'));
   const completionPlayed = useRef(false);
   const nativeCueStarted = useRef(false);
+  const restCueGeneration = useRef(0);
   const scroll = useRef<ScrollView>(null);
-  const exercise = workout.exercises[exerciseIndex];
+  const pendingSetScroll = useRef<string | null>(null);
+  const exerciseCardTop = useRef<number | null>(null);
+  const setPositions = useRef(new Map<string, number>());
+  const currentSet = currentWorkoutSet(workout);
+  const visibleIndices = visibleExerciseIndices(workout, hideCompleted);
+  const selectedIndex = visibleIndices.includes(exerciseIndex)
+    ? exerciseIndex
+    : (visibleIndices.find((index) => index > exerciseIndex) ?? visibleIndices[0] ?? -1);
+  const exercise = workout.exercises[selectedIndex];
+  const visiblePosition = visibleIndices.indexOf(selectedIndex);
+  const previousIndex = visibleIndices[visiblePosition - 1];
+  const nextIndex = visibleIndices[visiblePosition + 1];
+  const hiddenCount = workout.exercises.length - visibleIndices.length;
+  useEffect(() => {
+    if (selectedIndex >= 0 && selectedIndex !== exerciseIndex) navigateExercise(selectedIndex);
+  }, [selectedIndex, exerciseIndex]);
   const previousWorkouts = previousRoutineWorkouts(history, workout.routineId);
   const previousExercise = previousWorkouts[0]?.exercises.find((item) => item.id === exercise?.id);
   const suggestIncrease = exercise ? suggestsLoadIncrease(exercise, previousWorkouts) : false;
@@ -581,7 +605,13 @@ export function WorkoutScreen({
       shouldPlayInBackground: false,
     });
   }, []);
-  useEffect(() => () => stopBackgroundRestCue(), []);
+  useEffect(
+    () => () => {
+      restCueGeneration.current += 1;
+      stopBackgroundRestCue();
+    },
+    [],
+  );
   function scheduleRestCue(remainingMs: number) {
     try {
       nativeCueStarted.current = startBackgroundRestCue(remainingMs);
@@ -606,12 +636,36 @@ export function WorkoutScreen({
       return;
     completionPlayed.current = true;
     setRestTimer((current) => (current ? pauseRestTimer(current, now) : current));
-    if (!nativeCueStarted.current) void cuePlayer.seekTo(0).then(() => cuePlayer.play());
+    const generation = restCueGeneration.current;
+    if (!nativeCueStarted.current)
+      void cuePlayer.seekTo(0).then(() => {
+        if (restCueGeneration.current === generation) cuePlayer.play();
+      });
   }, [restTimer, restLeft, now, cuePlayer]);
+  function beginRest(exerciseId: string, setId: string, seconds: number) {
+    restCueGeneration.current += 1;
+    const pressedAt = Date.now();
+    setNow(pressedAt);
+    completionPlayed.current = false;
+    cuePlayer.pause();
+    stopBackgroundRestCue();
+    const started = startRestTimer(exerciseId, setId, seconds, pressedAt);
+    setRestTimer(started);
+    scheduleRestCue(started.remainingMs);
+  }
+  function clearRest() {
+    restCueGeneration.current += 1;
+    cuePlayer.pause();
+    stopBackgroundRestCue();
+    nativeCueStarted.current = false;
+    completionPlayed.current = false;
+    setRestTimer(null);
+  }
   function toggleRest(exerciseId: string, setId: string, seconds: number) {
     const pressedAt = Date.now();
     setNow(pressedAt);
-    if (restTimer?.exerciseId === exerciseId && restTimer.setId === setId && restLeft > 0) {
+    const sameTimer = restTimer?.exerciseId === exerciseId && restTimer.setId === setId;
+    if (sameTimer && restRemainingMs(restTimer, pressedAt) > 0) {
       if (restTimer.runningSince === null) {
         const resumed = resumeRestTimer(restTimer, pressedAt);
         setRestTimer(resumed);
@@ -623,20 +677,40 @@ export function WorkoutScreen({
       }
       return;
     }
-    completionPlayed.current = false;
-    cuePlayer.pause();
-    stopBackgroundRestCue();
-    const started = startRestTimer(exerciseId, setId, seconds, pressedAt);
-    setRestTimer(started);
-    scheduleRestCue(started.remainingMs);
+    if (sameTimer) {
+      const marked = markLongRestAfterRestart(workout, restTimer, pressedAt);
+      if (marked !== workout) onChange(marked);
+    }
+    beginRest(exerciseId, setId, seconds);
   }
   function navigateExercise(index: number) {
+    pendingSetScroll.current = null;
+    if (index !== selectedIndex) {
+      exerciseCardTop.current = null;
+      setPositions.current.clear();
+    }
     Keyboard.dismiss();
     setChartOpen(false);
     setNoteEditorOpen(false);
     setExpandedSetId(null);
     setExerciseIndex(index);
     scroll.current?.scrollTo({ y: 0, animated: false });
+  }
+  function scrollToPendingSet() {
+    if (!pendingSetScroll.current || exerciseCardTop.current === null) return;
+    const top = setPositions.current.get(pendingSetScroll.current);
+    if (top === undefined) return;
+    pendingSetScroll.current = null;
+    scroll.current?.scrollTo({
+      y: Math.max(0, exerciseCardTop.current + top - 12),
+      animated: true,
+    });
+  }
+  function returnToCurrentSet() {
+    if (!currentSet) return;
+    navigateExercise(currentSet.exerciseIndex);
+    pendingSetScroll.current = currentSet.setId;
+    requestAnimationFrame(scrollToPendingSet);
   }
   function patch(
     exerciseId: string,
@@ -660,345 +734,458 @@ export function WorkoutScreen({
       ),
     });
   }
+  function toggleSet(set: Workout['exercises'][number]['sets'][number]) {
+    if (!set.done && (!validReps(set.reps) || !validWeight(set.weight))) {
+      onError(
+        'Informe de 1 a 999 repetições e uma carga de 0 a 9.999 kg. Para exercícios sem carga, digite 0.',
+      );
+      return;
+    }
+    const changedExercise = {
+      ...exercise,
+      sets: exercise.sets.map((item) => (item.id === set.id ? { ...item, done: !set.done } : item)),
+    };
+    onChange({
+      ...workout,
+      exercises: workout.exercises.map((item) =>
+        item.id === exercise.id ? changedExercise : item,
+      ),
+    });
+    if (set.done) return;
+    const complete = exerciseComplete(changedExercise);
+    if (complete && selectedIndex === workout.exercises.length - 1) {
+      clearRest();
+      return;
+    }
+    const seconds = Number(set.rest);
+    if (Number.isFinite(seconds) && seconds > 0) beginRest(exercise.id, set.id, seconds);
+    else clearRest();
+    if (complete && nextIndex !== undefined) navigateExercise(nextIndex);
+  }
   return (
-    <ScrollView ref={scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }} testID="workout-header">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Voltar"
-          onPress={onBack}
-          style={s.back}
+    <View style={{ flex: 1 }}>
+      <View
+        testID="workout-top-bar"
+        style={{
+          paddingHorizontal: 24,
+          paddingTop: 4,
+          paddingBottom: 8,
+          backgroundColor: c.background,
+          borderBottomWidth: 1,
+          borderBottomColor: c.line,
+          shadowColor: c.dark,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 4,
+          elevation: 3,
+          zIndex: 1,
+        }}
+      >
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}
+          testID="workout-header"
         >
-          <Icon name="arrow-left" size={18} />
-          <Text style={s.link}>Voltar</Text>
-        </Pressable>
-        <Text
-          accessibilityRole="header"
-          accessibilityLabel={workout.name}
-          numberOfLines={1}
-          style={{ flex: 1, fontSize: 14, fontWeight: '600', color: c.muted }}
-        >
-          {workout.name}
-        </Text>
-      </View>
-      <View style={{ gap: 8 }}>
-        <View style={s.sectionHeader}>
-          <Text style={s.fieldLabel}>Um passo de cada vez</Text>
-          <Text style={s.link}>
-            {done}/{sets.length} séries
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Voltar"
+            onPress={onBack}
+            style={s.back}
+          >
+            <Icon name="arrow-left" size={18} />
+            <Text style={s.link}>Voltar</Text>
+          </Pressable>
+          <Text
+            accessibilityRole="header"
+            accessibilityLabel={workout.name}
+            numberOfLines={1}
+            style={{ flex: 1, fontSize: 14, fontWeight: '600', color: c.muted }}
+          >
+            {workout.name}
           </Text>
         </View>
-        <View style={s.progressTrack}>
-          <View
-            style={[s.progressFill, { width: `${sets.length ? (done / sets.length) * 100 : 0}%` }]}
-          />
-        </View>
-      </View>
-      {restTimer && restTimer.exerciseId !== exercise?.id && restLeft > 0 && (
-        <View style={[s.noteCard, { padding: 12, gap: 12 }]} testID="rest-other-exercise">
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={s.fieldLabel}>Descanso em andamento</Text>
-            <Text style={s.small}>
-              {restingExercise?.name} · série {(restingSetIndex ?? 0) + 1} ·{' '}
-              {formatRestRemaining(restLeft)} restantes
-            </Text>
-          </View>
-          <View style={{ alignItems: 'center' }}>
-            <IconButton
-              label="Voltar ao exercício"
-              name="arrow-left"
+        <View>
+          <View style={s.sectionHeader}>
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityLabel="Ocultar exercícios concluídos"
+              accessibilityState={{ checked: hideCompleted }}
+              aria-checked={hideCompleted}
               onPress={() => {
-                const index = workout.exercises.findIndex(
-                  (item) => item.id === restTimer.exerciseId,
-                );
-                if (index >= 0) navigateExercise(index);
+                Keyboard.dismiss();
+                setHideCompleted((value) => !value);
+                setExpandedSetId(null);
+                setChartOpen(false);
+                setNoteEditorOpen(false);
               }}
-            />
-            <IconButton
-              name={restTimer.runningSince === null ? 'play' : 'pause'}
-              label={restTimer.runningSince === null ? 'Retomar descanso' : 'Pausar descanso'}
-              onPress={() => {
-                const seconds = restTimer.durationMs / 1000;
-                toggleRest(restTimer.exerciseId, restTimer.setId, seconds);
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                minHeight: 44,
+                flex: 1,
               }}
-            />
-          </View>
-        </View>
-      )}
-      {exercise && (
-        <View style={s.card} key={exercise.id}>
-          <Text style={s.small}>
-            Exercício {exerciseIndex + 1} de {workout.exercises.length}
-          </Text>
-          <View style={s.cardHeader}>
-            <View style={s.routineBadge}>
-              <Text style={s.badgeText}>{String(exerciseIndex + 1).padStart(2, '0')}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.cardTitle}>{exercise.name}</Text>
-              <Text style={s.small}>
-                {exercise.sets.filter((set) => set.done).length} de {exercise.sets.length} séries
-                concluídas
+            >
+              <Icon
+                name={hideCompleted ? 'eye-off' : 'eye'}
+                size={16}
+                color={hideCompleted ? c.dark : c.muted}
+              />
+              <Text
+                style={[
+                  s.small,
+                  { fontSize: 11, flexShrink: 1, color: hideCompleted ? c.dark : c.muted },
+                ]}
+              >
+                Ocultar concluídos{hiddenCount ? ` (${hiddenCount})` : ''}
+              </Text>
+            </Pressable>
+            <View
+              testID="workout-progress-summary"
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            >
+              <Text style={s.link}>
+                {done}/{sets.length} séries
+              </Text>
+              <Text style={s.link}>
+                · {(sets.length ? (done / sets.length) * 100 : 0).toFixed(2)}%
               </Text>
             </View>
-            <IconButton
-              name="bar-chart-2"
-              label={`Expandir gráfico de ${exercise.name}`}
-              onPress={() => {
-                Keyboard.dismiss();
-                setChartOpen(true);
-              }}
-            />
-            <IconButton
-              name="help-circle"
-              label={`Ver mapa muscular de ${exercise.name}`}
-              onPress={() => setMusclePreviewId(exercise.id)}
+          </View>
+          <View style={s.progressTrack} testID="workout-progress-track">
+            <View
+              style={[
+                s.progressFill,
+                { width: `${sets.length ? (done / sets.length) * 100 : 0}%` },
+              ]}
             />
           </View>
-          <ExerciseFeedbackStatus
-            key={`previous-feedback-${exercise.id}`}
-            exercise={previousExercise}
-            previous
-            suggestedAdjustment={
-              suggestDecrease ? 'decrease' : suggestIncrease ? 'increase' : undefined
-            }
-            executionCaution={previousExercise?.sets.some(
-              (set, index) =>
-                index < exercise.sets.length &&
-                set.done &&
-                validReps(set.reps) &&
-                validWeight(set.weight) &&
-                (set.longRest || set.restPause || set.cramp),
-            )}
-          />
-          <View style={s.sectionHeader} testID="exercise-note-summary">
-            <Text style={[s.small, { flex: 1 }]}>
-              {exercise.note?.trim() ? `Observações: ${exercise.note}` : 'Adicionar observação'}
+        </View>
+      </View>
+      <ScrollView
+        ref={scroll}
+        style={{ flex: 1 }}
+        contentContainerStyle={[s.content, { paddingTop: 12, gap: 12 }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <CurrentSetCard
+          current={
+            currentSet
+              ? {
+                  exerciseName: workout.exercises[currentSet.exerciseIndex].name,
+                  setIndex: currentSet.setIndex,
+                }
+              : null
+          }
+          rest={
+            restTimer && restLeft > 0
+              ? {
+                  remaining: restLeft,
+                  paused: restTimer.runningSince === null,
+                  after: `${restingExercise?.name} · série ${(restingSetIndex ?? 0) + 1}`,
+                }
+              : null
+          }
+          onReturn={returnToCurrentSet}
+          onToggleRest={() => {
+            if (restTimer)
+              toggleRest(restTimer.exerciseId, restTimer.setId, restTimer.durationMs / 1000);
+          }}
+        />
+        {exercise && (
+          <View
+            style={[s.card, { gap: 10, paddingVertical: 14 }]}
+            key={exercise.id}
+            onLayout={(event) => {
+              exerciseCardTop.current = event.nativeEvent.layout.y;
+              scrollToPendingSet();
+            }}
+          >
+            <Text style={s.small}>
+              Exercício {selectedIndex + 1} de {workout.exercises.length}
             </Text>
-            <IconButton
-              name="edit-2"
-              label={`Editar observações de ${exercise.name}`}
-              onPress={() => {
-                Keyboard.dismiss();
-                setNoteEditorOpen(true);
-              }}
-            />
-          </View>
-          <View style={[s.setRow, { paddingHorizontal: 8 }]}>
-            <Text style={[s.tableHeading, { width: 28, textAlign: 'center' }]}>SÉRIE</Text>
-            <Text style={[s.tableHeading, { flex: 1, textAlign: 'center' }]}>REPS</Text>
-            <Text style={[s.tableHeading, { flex: 1, textAlign: 'center' }]}>KG</Text>
-            <Text style={[s.tableHeading, { width: 46, textAlign: 'center' }]}>FEITO</Text>
-          </View>
-          {exercise.sets.map((set, i) => (
-            <View key={set.id} testID={`workout-set-${set.id}`}>
-              <View style={[s.setRow, s.setEntry]}>
-                <View
-                  pointerEvents="none"
-                  style={[s.completedRow, { opacity: set.done ? 1 : 0 }]}
-                />
-                <Text style={[s.setIndex, { width: 28, textAlign: 'center' }]}>
-                  {String(i + 1).padStart(2, '0')}
+            <View style={s.cardHeader}>
+              <View style={s.routineBadge}>
+                <Text style={s.badgeText}>{String(selectedIndex + 1).padStart(2, '0')}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.cardTitle}>{exercise.name}</Text>
+                <Text style={s.small}>
+                  {exercise.sets.filter((set) => set.done).length} de {exercise.sets.length} séries
+                  concluídas
                 </Text>
-                <View style={{ flex: 1 }}>
-                  <TextInput
-                    accessibilityLabel={`${exercise.name} série ${i + 1} repetições`}
-                    keyboardType="number-pad"
-                    maxLength={3}
-                    value={set.reps}
-                    onChangeText={(reps) => patch(exercise.id, set.id, { reps, done: false })}
-                    style={s.setInput}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <TextInput
-                    accessibilityLabel={`${exercise.name} série ${i + 1} carga em kg`}
-                    keyboardType="decimal-pad"
-                    maxLength={8}
-                    value={set.weight}
-                    placeholder="0"
-                    placeholderTextColor={c.muted}
-                    onChangeText={(weight) => patch(exercise.id, set.id, { weight, done: false })}
-                    style={[
-                      s.setInput,
-                      (set.longRest || set.restPause || set.cramp) && {
-                        height: 46,
-                        paddingTop: 3,
-                        paddingBottom: 15,
-                      },
-                    ]}
-                  />
-                  {(set.longRest || set.restPause || set.cramp) && (
-                    <View
-                      pointerEvents="none"
-                      style={{
-                        position: 'absolute',
-                        bottom: 4,
-                        left: 0,
-                        right: 0,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <SetExecutionSummary set={set} current />
-                    </View>
-                  )}
-                </View>
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityLabel={`Concluir ${exercise.name} série ${i + 1}`}
-                  accessibilityState={{ checked: set.done }}
-                  aria-checked={set.done}
-                  onPress={() => {
-                    if (!set.done && (!validReps(set.reps) || !validWeight(set.weight))) {
-                      onError(
-                        'Informe de 1 a 999 repetições e uma carga de 0 a 9.999 kg. Para exercícios sem carga, digite 0.',
-                      );
-                      return;
-                    }
-                    patch(exercise.id, set.id, { done: !set.done });
-                  }}
-                  style={s.check}
-                >
+              </View>
+              <IconButton
+                name="bar-chart-2"
+                label={`Expandir gráfico de ${exercise.name}`}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setChartOpen(true);
+                }}
+              />
+              <IconButton
+                name="help-circle"
+                label={`Ver mapa muscular de ${exercise.name}`}
+                onPress={() => setMusclePreviewId(exercise.id)}
+              />
+            </View>
+            <ExerciseFeedbackStatus
+              key={`previous-feedback-${exercise.id}`}
+              exercise={previousExercise}
+              previous
+              suggestedAdjustment={
+                suggestDecrease ? 'decrease' : suggestIncrease ? 'increase' : undefined
+              }
+              executionCaution={previousExercise?.sets.some(
+                (set, index) =>
+                  index < exercise.sets.length &&
+                  set.done &&
+                  validReps(set.reps) &&
+                  validWeight(set.weight) &&
+                  (set.longRest || set.restPause || set.cramp),
+              )}
+            />
+            <View style={s.sectionHeader} testID="exercise-note-summary">
+              <Text style={[s.small, { flex: 1 }]}>
+                {exercise.note?.trim() ? `Observações: ${exercise.note}` : 'Adicionar observação'}
+              </Text>
+              <IconButton
+                name="edit-2"
+                label={`Editar observações de ${exercise.name}`}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setNoteEditorOpen(true);
+                }}
+              />
+            </View>
+            <View style={[s.setRow, { paddingHorizontal: 8 }]}>
+              <Text style={[s.tableHeading, { width: 28, textAlign: 'center' }]}>SÉRIE</Text>
+              <Text style={[s.tableHeading, { flex: 1, textAlign: 'center' }]}>REPS</Text>
+              <Text style={[s.tableHeading, { flex: 1, textAlign: 'center' }]}>KG</Text>
+              <Text style={[s.tableHeading, { width: 46, textAlign: 'center' }]}>FEITO</Text>
+            </View>
+            {exercise.sets.map((set, i) => (
+              <View
+                key={set.id}
+                testID={`workout-set-${set.id}`}
+                onLayout={(event) => {
+                  setPositions.current.set(set.id, event.nativeEvent.layout.y);
+                  scrollToPendingSet();
+                }}
+              >
+                <View style={[s.setRow, s.setEntry]}>
                   <View
                     pointerEvents="none"
-                    style={[s.checkHighlight, { opacity: set.done ? 1 : 0 }]}
+                    style={[s.completedRow, { opacity: set.done ? 1 : 0 }]}
                   />
-                  <Icon name="check" color={set.done ? c.lime : c.muted} size={19} />
-                </Pressable>
-              </View>
-              <SetComparison
-                target={set.target}
-                last={previousExercise?.sets[i]}
-                warnOnIncrease={suggestIncrease}
-                index={i}
-              />
-              <View style={[s.row, { justifyContent: 'space-between', paddingTop: 5 }]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.small}>{`Série ${i + 1} · ${restLabel(set.rest)}`}</Text>
-                  {restTimer?.exerciseId === exercise.id && restTimer.setId === set.id && (
-                    <Text
-                      accessibilityLiveRegion="polite"
-                      testID={`rest-remaining-${set.id}`}
-                      style={[s.fieldLabel, { color: restLeft === 0 ? c.dark : c.ink }]}
-                    >
-                      {restLeft === 0
-                        ? 'Descanso concluído'
-                        : `${formatRestRemaining(restLeft)} restantes${restTimer.runningSince === null ? ' · pausado' : ''}`}
-                    </Text>
+                  <Text style={[s.setIndex, { width: 28, textAlign: 'center' }]}>
+                    {String(i + 1).padStart(2, '0')}
+                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <TextInput
+                      accessibilityLabel={`${exercise.name} série ${i + 1} repetições`}
+                      keyboardType="number-pad"
+                      maxLength={3}
+                      value={set.reps}
+                      onChangeText={(reps) => patch(exercise.id, set.id, { reps, done: false })}
+                      style={s.setInput}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <TextInput
+                      accessibilityLabel={`${exercise.name} série ${i + 1} carga em kg`}
+                      keyboardType="decimal-pad"
+                      maxLength={8}
+                      value={set.weight}
+                      placeholder="0"
+                      placeholderTextColor={c.muted}
+                      onChangeText={(weight) => patch(exercise.id, set.id, { weight, done: false })}
+                      style={[
+                        s.setInput,
+                        (set.longRest || set.restPause || set.cramp) && {
+                          height: 46,
+                          paddingTop: 3,
+                          paddingBottom: 15,
+                        },
+                      ]}
+                    />
+                    {(set.longRest || set.restPause || set.cramp) && (
+                      <View
+                        pointerEvents="none"
+                        style={{
+                          position: 'absolute',
+                          bottom: 4,
+                          left: 0,
+                          right: 0,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <SetExecutionSummary set={set} current />
+                      </View>
+                    )}
+                  </View>
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={`Concluir ${exercise.name} série ${i + 1}`}
+                    accessibilityState={{ checked: set.done }}
+                    aria-checked={set.done}
+                    onPress={() => toggleSet(set)}
+                    style={s.check}
+                  >
+                    <View
+                      pointerEvents="none"
+                      style={[s.checkHighlight, { opacity: set.done ? 1 : 0 }]}
+                    />
+                    <Icon name="check" color={set.done ? c.lime : c.muted} size={19} />
+                  </Pressable>
+                </View>
+                <SetComparison
+                  target={set.target}
+                  last={previousExercise?.sets[i]}
+                  warnOnIncrease={suggestIncrease}
+                  index={i}
+                />
+                <View style={[s.row, { justifyContent: 'space-between', paddingTop: 5 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.small}>{`Série ${i + 1} · ${restLabel(set.rest)}`}</Text>
+                    {restTimer?.exerciseId === exercise.id && restTimer.setId === set.id && (
+                      <Text
+                        accessibilityLiveRegion="polite"
+                        testID={`rest-remaining-${set.id}`}
+                        style={[s.fieldLabel, { color: restLeft === 0 ? c.dark : c.ink }]}
+                      >
+                        {restLeft === 0
+                          ? 'Descanso concluído'
+                          : `${formatRestRemaining(restLeft)} restantes${restTimer.runningSince === null ? ' · pausado' : ''}`}
+                      </Text>
+                    )}
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Detalhes de ${exercise.name} série ${i + 1}`}
+                    accessibilityHint="Abrir ou recolher as marcações de descanso longo, rest-pause e cãibra desta série."
+                    accessibilityState={{ expanded: expandedSetId === set.id }}
+                    aria-expanded={expandedSetId === set.id}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setExpandedSetId((current) => (current === set.id ? null : set.id));
+                    }}
+                    style={s.iconButton}
+                  >
+                    <Icon
+                      name={expandedSetId === set.id ? 'minus' : 'plus'}
+                      size={18}
+                      color={set.longRest || set.restPause || set.cramp ? c.dark : c.muted}
+                    />
+                  </Pressable>
+                  {set.rest !== undefined && Number(set.rest) > 0 && (
+                    <IconButton
+                      name={
+                        restTimer?.exerciseId === exercise.id &&
+                        restTimer.setId === set.id &&
+                        restTimer.runningSince !== null &&
+                        restLeft > 0
+                          ? 'pause'
+                          : 'play'
+                      }
+                      label={
+                        restTimer?.exerciseId === exercise.id && restTimer.setId === set.id
+                          ? restLeft === 0
+                            ? `Reiniciar descanso de ${exercise.name} série ${i + 1}`
+                            : restTimer.runningSince === null
+                              ? `Retomar descanso de ${exercise.name} série ${i + 1}`
+                              : `Pausar descanso de ${exercise.name} série ${i + 1}`
+                          : `Iniciar descanso de ${exercise.name} série ${i + 1}`
+                      }
+                      onPress={() => toggleRest(exercise.id, set.id, Number(set.rest))}
+                    />
                   )}
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Detalhes de ${exercise.name} série ${i + 1}`}
-                  accessibilityHint="Abrir ou recolher as marcações de descanso longo, rest-pause e cãibra desta série."
-                  accessibilityState={{ expanded: expandedSetId === set.id }}
-                  aria-expanded={expandedSetId === set.id}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setExpandedSetId((current) => (current === set.id ? null : set.id));
-                  }}
-                  style={s.iconButton}
-                >
-                  <Icon
-                    name={expandedSetId === set.id ? 'minus' : 'plus'}
-                    size={18}
-                    color={set.longRest || set.restPause || set.cramp ? c.dark : c.muted}
-                  />
-                </Pressable>
-                {set.rest !== undefined && Number(set.rest) > 0 && (
-                  <IconButton
-                    name={
-                      restTimer?.exerciseId === exercise.id &&
-                      restTimer.setId === set.id &&
-                      restTimer.runningSince !== null &&
-                      restLeft > 0
-                        ? 'pause'
-                        : 'play'
-                    }
-                    label={
-                      restTimer?.exerciseId === exercise.id && restTimer.setId === set.id
-                        ? restLeft === 0
-                          ? `Reiniciar descanso de ${exercise.name} série ${i + 1}`
-                          : restTimer.runningSince === null
-                            ? `Retomar descanso de ${exercise.name} série ${i + 1}`
-                            : `Pausar descanso de ${exercise.name} série ${i + 1}`
-                        : `Iniciar descanso de ${exercise.name} série ${i + 1}`
-                    }
-                    onPress={() => toggleRest(exercise.id, set.id, Number(set.rest))}
+                {expandedSetId === set.id && (
+                  <SetExecutionControls
+                    set={set}
+                    seriesLabel={`${exercise.name} série ${i + 1}`}
+                    onChange={(changes) => patch(exercise.id, set.id, changes)}
                   />
                 )}
               </View>
-              {expandedSetId === set.id && (
-                <SetExecutionControls
-                  set={set}
-                  seriesLabel={`${exercise.name} série ${i + 1}`}
-                  onChange={(changes) => patch(exercise.id, set.id, changes)}
-                />
-              )}
-            </View>
-          ))}
-        </View>
-      )}
-      {workout.exercises.length > 1 && (
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <View style={{ flex: 1 }}>
+            ))}
+          </View>
+        )}
+        {!exercise && hideCompleted && (
+          <View style={s.card} testID="completed-exercises-empty">
+            <Text style={s.cardTitle}>Todos os exercícios foram concluídos.</Text>
+            <Text style={s.small}>
+              Você pode mostrar os exercícios novamente para conferir ou corrigir as séries.
+            </Text>
             <Button
-              label="Anterior"
-              icon="arrow-left"
+              label="Mostrar exercícios concluídos"
               secondary
-              disabled={exerciseIndex === 0}
-              onPress={() => navigateExercise(exerciseIndex - 1)}
+              icon="eye"
+              onPress={() => setHideCompleted(false)}
             />
           </View>
-          <View style={{ flex: 1 }}>
-            <Button
-              label="Próximo"
-              icon="arrow-right"
-              disabled={exerciseIndex === workout.exercises.length - 1}
-              onPress={() => navigateExercise(exerciseIndex + 1)}
-            />
+        )}
+        {exercise && workout.exercises.length > 1 && (
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Button
+                label="Anterior"
+                icon="arrow-left"
+                secondary
+                disabled={previousIndex === undefined}
+                onPress={() => previousIndex !== undefined && navigateExercise(previousIndex)}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button
+                label="Próximo"
+                icon="arrow-right"
+                disabled={nextIndex === undefined}
+                onPress={() => nextIndex !== undefined && navigateExercise(nextIndex)}
+              />
+            </View>
           </View>
-        </View>
-      )}
-      {exercise && (
-        <ExerciseFeedbackControls
-          key={`feedback-${exercise.id}`}
-          exercise={exercise}
-          onChange={patchExercise}
+        )}
+        {exercise && (
+          <ExerciseFeedbackControls
+            key={`feedback-${exercise.id}`}
+            exercise={exercise}
+            onChange={patchExercise}
+          />
+        )}
+        <Text style={s.small}>
+          Sem carga externa? Registre 0 kg. Alterar uma série desmarca sua conclusão para você
+          conferir novamente.
+        </Text>
+        <Button label="Finalizar treino" icon="check-circle" onPress={onFinish} />
+        <EnergySummary workout={workout} />
+        <Button label="Continuar depois" secondary icon="pause" onPress={onBack} />
+        <Pressable accessibilityRole="button" onPress={onCancel} style={s.textButton}>
+          <Text style={{ color: c.danger }}>Descartar treino</Text>
+        </Pressable>
+        <ExerciseMuscleModal
+          exercise={workout.exercises.find((item) => item.id === musclePreviewId) ?? null}
+          onClose={() => setMusclePreviewId(null)}
         />
-      )}
-      <Text style={s.small}>
-        Sem carga externa? Registre 0 kg. Alterar uma série desmarca sua conclusão para você
-        conferir novamente.
-      </Text>
-      <Button label="Finalizar treino" icon="check-circle" onPress={onFinish} />
-      <EnergySummary workout={workout} />
-      <Button label="Continuar depois" secondary icon="pause" onPress={onBack} />
-      <Pressable accessibilityRole="button" onPress={onCancel} style={s.textButton}>
-        <Text style={{ color: c.danger }}>Descartar treino</Text>
-      </Pressable>
-      <ExerciseMuscleModal
-        exercise={workout.exercises.find((item) => item.id === musclePreviewId) ?? null}
-        onClose={() => setMusclePreviewId(null)}
-      />
-      <WorkoutHistoryModal
-        exercise={chartOpen ? exercise : null}
-        history={history}
-        routineId={workout.routineId}
-        onClose={() => setChartOpen(false)}
-      />
-      {noteEditorOpen && exercise && (
-        <ExerciseNoteModal
-          key={`note-${exercise.id}`}
-          exercise={exercise}
-          onClose={() => setNoteEditorOpen(false)}
-          onSave={(note) => {
-            onExerciseNote(exercise.id, note);
-            setNoteEditorOpen(false);
-          }}
+        <WorkoutHistoryModal
+          exercise={chartOpen ? exercise : null}
+          history={history}
+          routineId={workout.routineId}
+          onClose={() => setChartOpen(false)}
         />
-      )}
-    </ScrollView>
+        {noteEditorOpen && exercise && (
+          <ExerciseNoteModal
+            key={`note-${exercise.id}`}
+            exercise={exercise}
+            onClose={() => setNoteEditorOpen(false)}
+            onSave={(note) => {
+              onExerciseNote(exercise.id, note);
+              setNoteEditorOpen(false);
+            }}
+          />
+        )}
+      </ScrollView>
+    </View>
   );
 }
 

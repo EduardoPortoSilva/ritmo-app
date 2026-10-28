@@ -54,7 +54,9 @@ test('descanso por série inicia, pausa, retoma e termina no treino', async ({ p
   await page.getByRole('button', { name: 'Pausar descanso de Supino série 3' }).click();
 });
 
-test('aviso de descanso permite voltar ao exercício durante outro exercício', async ({ page }) => {
+test('card da série atual permite retornar e controlar o descanso ao consultar outro exercício', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Criar minha primeira rotina' }).click();
   await page.getByLabel('Nome da rotina', { exact: true }).fill('Treino alternado');
@@ -66,8 +68,8 @@ test('aviso de descanso permite voltar ao exercício durante outro exercício', 
   await page.getByRole('button', { name: 'Iniciar treino', exact: true }).click();
   await page.getByRole('button', { name: 'Iniciar descanso de Supino série 1' }).click();
   await page.getByRole('button', { name: 'Próximo' }).click();
-  const notice = page.getByTestId('rest-other-exercise');
-  const back = notice.getByRole('button', { name: 'Voltar ao exercício', exact: true });
+  const notice = page.getByTestId('current-set-card');
+  const back = notice.getByRole('button', { name: 'Voltar à série atual', exact: true });
   const pause = notice.getByRole('button', { name: 'Pausar descanso', exact: true });
   await expect(notice).toContainText('Supino');
   for (const width of [390, 320]) {
@@ -76,12 +78,22 @@ test('aviso de descanso permite voltar ao exercício durante outro exercício', 
     const backBox = await back.boundingBox();
     const pauseBox = await pause.boundingBox();
     const noticeBox = await notice.boundingBox();
-    expect(backBox!.y + backBox!.height).toBeLessThanOrEqual(pauseBox!.y);
-    expect(backBox!.x).toBeCloseTo(pauseBox!.x, 1);
+    expect(backBox!.x + backBox!.width).toBeLessThanOrEqual(pauseBox!.x);
+    expect(backBox!.y).toBeCloseTo(pauseBox!.y, 1);
     expect(backBox!.width).toBeGreaterThanOrEqual(44);
     expect(pauseBox!.height).toBeGreaterThanOrEqual(44);
-    expect(noticeBox!.height).toBeLessThanOrEqual(112);
-    await page.screenshot({ path: `test-results/descanso-compacto-20261014-${width}.png` });
+    expect(noticeBox!.height).toBeLessThanOrEqual(64);
+    await expect
+      .poll(() =>
+        notice
+          .getByText('Série atual · 1', { exact: true })
+          .evaluate((node) => node.scrollWidth <= node.clientWidth),
+      )
+      .toBe(true);
+    await notice.screenshot({
+      path: `test-results/serie-atual-compacto-20261022-${width}.png`,
+      animations: 'disabled',
+    });
   }
   await pause.click();
   await notice.getByRole('button', { name: 'Retomar descanso', exact: true }).click();

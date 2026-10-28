@@ -114,7 +114,7 @@ test('repetir treino preenche cargas anteriores, permite editar e retoma sem mar
   await expect(page.getByLabel('Supino série 3 carga em kg', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('Supino série 1 repetições', { exact: true })).toHaveValue('12');
   await expect(page.getByText('Evolução da carga', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('Um passo de cada vez', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('workout-header')).toContainText('Rotina para repetir');
   await page.getByRole('button', { name: 'Expandir gráfico de Supino', exact: true }).click();
   await expect(page.getByText('Evolução da carga', { exact: true })).toBeVisible();
   await expect(page.getByTestId(/^load-record-/)).toHaveCount(1);
@@ -215,7 +215,7 @@ test('gráfico usa datas equidistantes, maior carga concluída e histórico do e
   await page.getByRole('button', { name: 'Fechar gráfico', exact: true }).click();
   await page.getByRole('button', { name: 'Próximo', exact: true }).click();
   await expect(points).toHaveCount(0);
-  await expect(page.getByText('Um passo de cada vez', { exact: true })).toBeVisible();
+  await expect(page.getByText('Exercício 3 de 3', { exact: true })).toBeVisible();
   await page
     .getByRole('button', { name: 'Expandir gráfico de Novo exercício', exact: true })
     .click();
