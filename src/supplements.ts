@@ -1,9 +1,13 @@
+import { validSupplementDoses, type SupplementSubstanceDose } from './supplementDoseSchema.ts';
+
 export type Supplement = {
+  substanceDoses?: SupplementSubstanceDose[];
   id: string;
   name: string;
   note: string;
   createdAt: string;
   takenOn: string[];
+  takenAt?: Record<string, string>;
   reminderTime?: string;
   substanceIds?: string[];
   blendIds?: string[];
@@ -33,6 +37,8 @@ export function supplementError(supplement: Supplement): string | null {
   if (supplement.note.length > 300) return 'Use até 300 caracteres na observação.';
   if (!validLinks(supplement.substanceIds, 30) || !validLinks(supplement.blendIds, 50))
     return 'Confira os vínculos de substâncias e blends do suplemento.';
+  if (!validSupplementDoses(supplement.substanceDoses))
+    return 'Informe uma dose positiva válida para cada substância selecionada.';
   if (supplement.reminderTime !== undefined && !validReminderTime(supplement.reminderTime))
     return 'Use um horário válido: hora de 00 a 23 e minutos de 00 a 59.';
   return null;
@@ -49,6 +55,16 @@ export function isSupplement(value: any): value is Supplement {
     Array.isArray(value.takenOn) &&
     value.takenOn.every(validDay) &&
     new Set(value.takenOn).size === value.takenOn.length &&
+    (value.takenAt === undefined ||
+      (value.takenAt &&
+        typeof value.takenAt === 'object' &&
+        !Array.isArray(value.takenAt) &&
+        Object.entries(value.takenAt).every(
+          ([day, at]) =>
+            value.takenOn.includes(day) &&
+            typeof at === 'string' &&
+            Number.isFinite(Date.parse(at)),
+        ))) &&
     supplementError(value) === null
   );
 }
@@ -72,10 +88,19 @@ export function supplementStreak(supplement: Supplement, now: Date): number {
 }
 export function setSupplementTaken(supplement: Supplement, taken: boolean, now: Date): Supplement {
   const day = dayKey(now);
+  if (supplement.takenOn.includes(day) === taken) return supplement;
   const days = new Set(supplement.takenOn);
   if (taken) days.add(day);
   else days.delete(day);
-  return { ...supplement, takenOn: [...days].sort() };
+  const takenAt = { ...supplement.takenAt };
+  if (taken) takenAt[day] = now.toISOString();
+  else delete takenAt[day];
+  const { takenAt: _previousTimes, ...base } = supplement;
+  return {
+    ...base,
+    takenOn: [...days].sort(),
+    ...(Object.keys(takenAt).length ? { takenAt } : {}),
+  };
 }
 export function recentSupplementDays(now: Date): string[] {
   const days = [dayKey(now)];

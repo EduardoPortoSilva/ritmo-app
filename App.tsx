@@ -94,8 +94,14 @@ import {
 import { backgroundCardioCueAvailable, syncBackgroundCardioCue } from './src/cardioCue';
 import { requestWidget, widgetAvailable } from './src/widget';
 import { SupplementCard, SupplementEditor } from './src/SupplementScreens';
-import { dayKey, setSupplementTaken, supplementError, type Supplement } from './src/supplements';
+import { dayKey, supplementError, type Supplement } from './src/supplements';
 import { markSupplementsForNewDoses } from './src/supplementIntakes';
+import {
+  supplementDoseError,
+  setSupplementTakenWithDoses,
+  saveSupplementConfiguration,
+  type SupplementHistoryPlan,
+} from './src/supplementDoses';
 import {
   enableNotifications,
   notificationsEnabled,
@@ -573,8 +579,10 @@ function Ritmo() {
       },
     });
   }
-  async function saveSupplement(supplement: Supplement) {
-    const error = supplementError(supplement);
+  async function saveSupplement(supplement: Supplement, history?: SupplementHistoryPlan) {
+    const error =
+      supplementError(supplement) ??
+      supplementDoseError(supplement, dbRef.current.substances ?? []);
     if (error) {
       setDialog({ title: 'Confira o suplemento', message: error });
       return;
@@ -601,34 +609,33 @@ function Ritmo() {
         return;
       }
     }
-    update((previous) => {
-      const items = previous.supplements ?? [];
-      const existing = items.find((item) => item.id === supplement.id);
-      const cleaned = {
-        ...supplement,
-        name: supplement.name.trim(),
-        note: supplement.note.trim(),
-        takenOn: existing?.takenOn ?? [],
-      };
-      return {
-        ...previous,
-        supplements: existing
-          ? items.map((item) => (item.id === cleaned.id ? cleaned : item))
-          : [...items, cleaned],
-      };
-    });
+    try {
+      const next = saveSupplementConfiguration(dbRef.current, supplement, history);
+      assertStorableDatabase(JSON.stringify(next));
+      update(next);
+    } catch (error) {
+      setDialog({
+        title: 'Não foi possível salvar o suplemento',
+        message: (error as Error).message,
+      });
+      return;
+    }
     setRoute({ page: 'supplements' });
     setToast('Suplemento salvo. Um dia de cada vez!');
   }
   function toggleSupplement(id: string, taken: boolean) {
     const now = new Date();
     setToday(now);
-    update((previous) => ({
-      ...previous,
-      supplements: (previous.supplements ?? []).map((item) =>
-        item.id === id ? setSupplementTaken(item, taken, now) : item,
-      ),
-    }));
+    try {
+      const next = setSupplementTakenWithDoses(dbRef.current, id, taken, now);
+      assertStorableDatabase(JSON.stringify(next));
+      update(next);
+    } catch (error) {
+      setDialog({
+        title: 'Não foi possível atualizar o suplemento',
+        message: (error as Error).message,
+      });
+    }
   }
   function removeSupplement(supplement: Supplement) {
     setDialog({
@@ -1019,6 +1026,7 @@ function Ritmo() {
             />
           ) : route.page === 'supplement-editor' ? (
             <SupplementEditor
+              database={db}
               key={route.supplement.id}
               initial={route.supplement}
               substances={db.substances ?? []}
@@ -1512,6 +1520,7 @@ function Ritmo() {
                         <SupplementCard
                           key={item.id}
                           supplement={item}
+                          substances={db.substances ?? []}
                           today={today}
                           onToggle={(taken) => toggleSupplement(item.id, taken)}
                           onEdit={() => setRoute({ page: 'supplement-editor', supplement: item })}

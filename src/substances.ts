@@ -6,6 +6,7 @@ import {
   type FormulaBudget,
 } from './formulas.ts';
 import { validBlendIntake, type BlendIntake } from './substanceBlendSchema.ts';
+import { validSupplementDoseSource, type SupplementDoseSource } from './supplementDoseSchema.ts';
 
 export const substanceVariables = ['t', 'd', 'a', 'h', 'p1', 'p2', 'p3', 'p4'] as const;
 export type SubstanceModel = {
@@ -16,6 +17,7 @@ export type SubstanceModel = {
   horizonHours: number;
 };
 export type SubstanceDose = {
+  supplement?: SupplementDoseSource;
   blend?: BlendIntake;
   id: string;
   at: string;
@@ -127,7 +129,7 @@ export function rebuildDoses(doses: SubstanceDose[], budget = formulaBudget()): 
 }
 export function recordDose(
   substance: Substance,
-  dose: { id: string; at: string; amount: number },
+  dose: { id: string; at: string; amount: number; supplement?: SupplementDoseSource },
   now = Date.now(),
   budget = formulaBudget(),
 ): Substance {
@@ -185,6 +187,8 @@ export function validSubstance(value: unknown): value is Substance {
         !Number.isFinite(Date.parse(d.at)) ||
         !positive(d.amount, 1e9) ||
         (d.blend !== undefined && !validBlendIntake(d.blend, s.id, d.amount, s.unit)) ||
+        (d.supplement !== undefined &&
+          (!validSupplementDoseSource(d.supplement) || d.blend !== undefined)) ||
         substanceModelError(d.model) ||
         d.model.mode !== s.model.mode ||
         !Array.isArray(d.prior) ||

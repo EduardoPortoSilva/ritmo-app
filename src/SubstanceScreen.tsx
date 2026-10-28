@@ -281,6 +281,14 @@ export function SubstanceScreen({
                 {formatSubstanceQuantity(d.amount)} {item.unit} ·{' '}
                 {new Date(d.at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
               </Text>
+              {d.supplement && (
+                <Text style={s.small}>
+                  Suplemento: {d.supplement.supplementName} ·{' '}
+                  {d.supplement.estimatedTime
+                    ? 'horário médio informado para o histórico'
+                    : 'horário da confirmação'}
+                </Text>
+              )}
               {d.blend && (
                 <Text style={s.fieldLabel}>
                   Blend {d.blend.name} · {formatSubstanceQuantity(d.blend.servings)}{' '}

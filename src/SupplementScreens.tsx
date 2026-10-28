@@ -6,17 +6,23 @@ import { Button, Field, Icon, IconButton, PageHeader, s } from './ui';
 import { dayKey, recentSupplementDays, supplementStreak, type Supplement } from './supplements';
 import { remindersAvailable } from './reminders';
 import { SupplementLinks } from './SupplementLinks';
+import { SupplementDoseLinks } from './SupplementDoseLinks';
+import { SupplementHistory } from './SupplementHistory';
+import type { Database } from './model';
+import type { SupplementHistoryPlan } from './supplementDoses';
 import type { Substance } from './substances';
 import type { SubstanceBlend } from './substanceBlendSchema';
 
 export function SupplementCard({
   supplement,
+  substances = [],
   today,
   onToggle,
   onEdit,
   onDelete,
 }: {
   supplement: Supplement;
+  substances?: readonly Substance[];
   today: Date;
   onToggle: (taken: boolean) => void;
   onEdit?: () => void;
@@ -51,6 +57,26 @@ export function SupplementCard({
         )}
       </View>
       {!!supplement.note && <Text style={s.small}>{supplement.note}</Text>}
+      {!!supplement.substanceDoses?.length && (
+        <Text style={s.small}>
+          Por confirmação:{' '}
+          {supplement.substanceDoses
+            .map(
+              (d) =>
+                `${d.amount} ${d.unit} de ${substances.find((s) => s.id === d.substanceId)?.name ?? 'substância removida'}`,
+            )
+            .join(' · ')}
+        </Text>
+      )}
+      {taken && supplement.takenAt?.[dayKey(today)] && (
+        <Text style={s.small}>
+          Confirmado às{' '}
+          {new Date(supplement.takenAt[dayKey(today)]).toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </Text>
+      )}
       <View style={s.row}>
         <Icon name="zap" color={c.dark} />
         <Text
@@ -117,6 +143,7 @@ export function SupplementCard({
 }
 
 export function SupplementEditor({
+  database,
   initial,
   substances,
   blends,
@@ -124,11 +151,12 @@ export function SupplementEditor({
   onSave,
   onDirtyChange,
 }: {
+  database: Database;
   initial: Supplement;
   substances: Substance[];
   blends: SubstanceBlend[];
   onBack: () => void;
-  onSave: (supplement: Supplement) => Promise<void>;
+  onSave: (supplement: Supplement, history?: SupplementHistoryPlan) => Promise<void>;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const [draft, setDraft] = useState(initial);
@@ -136,16 +164,19 @@ export function SupplementEditor({
   const [hour, setHour] = useState(initial.reminderTime?.split(':')[0] ?? '08');
   const [minute, setMinute] = useState(initial.reminderTime?.split(':')[1] ?? '00');
   const [saving, setSaving] = useState(false);
-  async function save() {
+  async function save(history?: SupplementHistoryPlan) {
     if (saving) return;
     setSaving(true);
     try {
-      await onSave({
-        ...draft,
-        reminderTime: reminder
-          ? `${hour.trim() ? hour.trim().padStart(2, '0') : ''}:${minute.trim() ? minute.trim().padStart(2, '0') : ''}`
-          : undefined,
-      });
+      await onSave(
+        {
+          ...draft,
+          reminderTime: reminder
+            ? `${hour.trim() ? hour.trim().padStart(2, '0') : ''}:${minute.trim() ? minute.trim().padStart(2, '0') : ''}`
+            : undefined,
+        },
+        history,
+      );
     } finally {
       setSaving(false);
     }
@@ -157,7 +188,8 @@ export function SupplementEditor({
         draft.note !== initial.note ||
         time !== initial.reminderTime ||
         JSON.stringify(draft.substanceIds ?? []) !== JSON.stringify(initial.substanceIds ?? []) ||
-        JSON.stringify(draft.blendIds ?? []) !== JSON.stringify(initial.blendIds ?? []),
+        JSON.stringify(draft.blendIds ?? []) !== JSON.stringify(initial.blendIds ?? []) ||
+        JSON.stringify(draft.substanceDoses ?? []) !== JSON.stringify(initial.substanceDoses ?? []),
     );
   }, [draft, reminder, hour, minute, initial, onDirtyChange]);
   return (
@@ -182,6 +214,8 @@ export function SupplementEditor({
           onChangeText={(note) => setDraft({ ...draft, note })}
         />
       </View>
+      <SupplementDoseLinks supplement={draft} substances={substances} onChange={setDraft} />
+      <SupplementHistory database={database} supplement={draft} saving={saving} onApply={save} />
       <SupplementLinks
         supplement={draft}
         substances={substances}
