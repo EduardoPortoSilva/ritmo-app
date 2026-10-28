@@ -59,6 +59,8 @@ import {
 import { BulkImportScreen } from './src/BulkImportScreen';
 import { BackupScreen } from './src/BackupScreen';
 import { SubstanceScreen } from './src/SubstanceScreen';
+import { FormulaBulkScreen } from './src/FormulaBulkScreen';
+import { applyFormulaBulk } from './src/formulaBulk';
 import { BodyProfileScreen } from './src/EnergyScreens';
 import { assertStorableDatabase } from './src/backupLimits';
 import type { BackupPreview } from './src/backup';
@@ -140,6 +142,7 @@ type Route =
     }
   | { page: 'substances' }
   | { page: 'body-profile'; returnTo?: 'home' | 'routines' }
+  | { page: 'formula-bulk'; returnTo: 'routines' | 'substances' }
   | { page: 'division-editor'; division: DivisionDraft }
   | { page: 'division-detail'; divisionId: string }
   | { page: 'supplement-editor'; supplement: Supplement }
@@ -271,6 +274,18 @@ function Ritmo() {
   }, [ready]);
   function back() {
     if (restoringRef.current) return;
+    if (route.page === 'formula-bulk') {
+      const destination = { page: route.returnTo } as Route;
+      if (!editorDirty.current) setRoute(destination);
+      else
+        setDialog({
+          title: 'Sair da edição em lote?',
+          message: 'Seu pedido de correção ou JSON ainda está nesta tela.',
+          label: 'Descartar alterações',
+          onConfirm: () => setRoute(destination),
+        });
+      return;
+    }
     if (route.page === 'substances') {
       setRoute({ page: 'supplements' });
       return;
@@ -670,6 +685,7 @@ function Ritmo() {
       </SafeAreaView>
     );
   const subpage = [
+    'formula-bulk',
     'substances',
     'body-profile',
     'coverage',
@@ -722,7 +738,26 @@ function Ritmo() {
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          {route.page === 'substances' ? (
+          {route.page === 'formula-bulk' ? (
+            <FormulaBulkScreen
+              database={db}
+              onBack={back}
+              onDirtyChange={onDirtyChange}
+              onApply={(plan) => {
+                try {
+                  update((previous) => applyFormulaBulk(previous, plan));
+                  editorDirty.current = false;
+                  setRoute({ page: route.returnTo });
+                  setToast('Fórmulas atualizadas em lote.');
+                } catch (e) {
+                  setDialog({
+                    title: 'Não foi possível aplicar o lote',
+                    message: (e as Error).message,
+                  });
+                }
+              }}
+            />
+          ) : route.page === 'substances' ? (
             <SubstanceScreen
               items={db.substances ?? []}
               blends={db.substanceBlends ?? []}
@@ -732,6 +767,7 @@ function Ritmo() {
                 update(next);
               }}
               onBack={back}
+              onBulk={() => setRoute({ page: 'formula-bulk', returnTo: 'substances' })}
               onChange={(substances) => {
                 const current = dbRef.current;
                 const next = { ...current, substances };
@@ -1614,6 +1650,12 @@ function Ritmo() {
                     icon="user"
                     secondary
                     onPress={() => setRoute({ page: 'body-profile' })}
+                  />
+                  <Button
+                    label="Editar fórmulas em lote"
+                    icon="code"
+                    secondary
+                    onPress={() => setRoute({ page: 'formula-bulk', returnTo: 'routines' })}
                   />
                   {db.active && (
                     <Button

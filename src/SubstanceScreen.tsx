@@ -108,12 +108,14 @@ export function SubstanceScreen({
   onBlendsChange,
   onChange,
   onBack,
+  onBulk,
 }: {
   items: Substance[];
   blends: SubstanceBlend[];
   onBlendsChange: (blends: SubstanceBlend[]) => void;
   onChange: (items: Substance[]) => void;
   onBack: () => void;
+  onBulk: () => void;
 }) {
   const [now, setNow] = useState(Date.now);
   const [selected, setSelected] = useState<string | null>(null);
@@ -181,6 +183,7 @@ export function SubstanceScreen({
       />
       <View style={s.card}>
         <Text style={s.fieldLabel}>Modelos personalizados</Text>
+        <Button label="Editar fórmulas em lote" secondary icon="code" onPress={onBulk} />
         <Text style={s.small}>
           A fórmula e os parâmetros são definidos por você. O exemplo de absorção e eliminação serve
           para montar o modelo; não é um perfil farmacológico validado.
