@@ -37,6 +37,8 @@ import { ExerciseNoteModal } from './ExerciseNoteModal';
 import { ExerciseFeedbackControls, ExerciseFeedbackStatus } from './ExerciseFeedback';
 import { MusclePicker, MuscleLinksSummary } from './MusclePicker';
 import { ExerciseMuscleModal } from './ExerciseMuscleModal';
+import { EnergyModelControl, EnergySummary } from './EnergyScreens';
+import { validHeight } from './energy';
 import {
   formatRestRemaining,
   pauseRestTimer,
@@ -281,6 +283,11 @@ export function RoutineFields({
             <Text style={s.fieldLabel}>Metas por série</Text>
             <Text style={s.small}>{exercise.reps.length} séries</Text>
           </View>
+          <EnergyModelControl
+            name={exercise.name}
+            model={exercise.energyModel}
+            onChange={(energyModel) => changeExercise(exercise.id, { energyModel })}
+          />
           <MusclePicker
             exerciseNumber={index + 1}
             links={exercise.muscles}
@@ -915,6 +922,7 @@ export function WorkoutScreen({
         conferir novamente.
       </Text>
       <Button label="Finalizar treino" icon="check-circle" onPress={onFinish} />
+      <EnergySummary workout={workout} />
       <Button label="Continuar depois" secondary icon="pause" onPress={onBack} />
       <Pressable accessibilityRole="button" onPress={onCancel} style={s.textButton}>
         <Text style={{ color: c.danger }}>Descartar treino</Text>
@@ -953,9 +961,11 @@ export function FinishWorkoutScreen({
   workout: Workout;
   initialWeight: string;
   onBack: () => void;
-  onSave: (weight: string) => void;
+  onSave: (weight: string, height?: string) => void;
 }) {
   const [weight, setWeight] = useState(initialWeight);
+  const [height, setHeight] = useState(workout.bodyHeight ?? '');
+  const energy = workout.exercises.some((e) => e.energyModel);
   const [error, setError] = useState('');
   const pending = allSets(workout).filter((set) => !set.done).length;
   return (
@@ -984,7 +994,13 @@ export function FinishWorkoutScreen({
           </Text>
         )}
         <Text style={s.small}>Opcional · salvo junto com este treino.</Text>
+        {energy && (
+          <Field label="Altura neste treino (cm)" numeric value={height} onChangeText={setHeight} />
+        )}
       </View>
+      <EnergySummary
+        workout={{ ...workout, bodyWeight: weight || undefined, bodyHeight: height || undefined }}
+      />
       <View style={s.progressCard}>
         <Text style={s.fieldLabel}>
           {pending ? 'Finalizar com séries pendentes?' : 'Treino feito. Boa!'}
@@ -1004,7 +1020,11 @@ export function FinishWorkoutScreen({
             return;
           }
           Keyboard.dismiss();
-          onSave(weight.trim());
+          if (energy && height.trim() && !validHeight(height)) {
+            setError('Informe uma altura de 50 a 250 cm.');
+            return;
+          }
+          onSave(weight.trim(), energy ? height.trim() : undefined);
         }}
       />
       <Button label="Voltar ao treino" secondary onPress={onBack} />
@@ -1054,6 +1074,7 @@ export function WorkoutDetail({
           </Text>
         </View>
       )}
+      <EnergySummary workout={workout} />
       <View style={s.metrics}>
         <Metric
           value={String(allSets(workout).filter((set) => set.done).length)}

@@ -57,6 +57,7 @@ test('backup completo preserva planejamento, histórico, sessões e suplementos'
     substances: 0,
     substanceBlends: 0,
     substanceDoses: 0,
+    bodyProfile: false,
     activeWorkout: true,
     activeCardio: true,
   });

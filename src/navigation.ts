@@ -1,5 +1,6 @@
 const protectedPages = new Set([
   'substances',
+  'body-profile',
   'editor',
   'division-editor',
   'supplement-editor',

@@ -1,4 +1,11 @@
 import { isSupplement, type Supplement } from './supplements.ts';
+import {
+  energyModelError,
+  validHeight,
+  validProfile,
+  type EnergyModel,
+  type BodyProfile,
+} from './energy.ts';
 import { validSubstance, type Substance } from './substances.ts';
 import { validBlend, type SubstanceBlend } from './substanceBlendSchema.ts';
 import { validMuscleLinks, muscleLinksKey, type MuscleLink } from './muscles.ts';
@@ -12,6 +19,7 @@ import {
 } from './cardio.ts';
 
 export type PlannedExercise = {
+  energyModel?: EnergyModel;
   id: string;
   name: string;
   note?: string;
@@ -48,6 +56,7 @@ export const loadAdjustments = {
 } as const;
 export type LoadAdjustment = keyof typeof loadAdjustments;
 export type LoggedExercise = {
+  energyModel?: EnergyModel;
   id: string;
   name: string;
   note?: string;
@@ -59,6 +68,7 @@ export type LoggedExercise = {
   externalImpediment?: boolean;
 };
 export type Workout = {
+  bodyHeight?: string;
   id: string;
   routineId: string;
   name: string;
@@ -68,6 +78,7 @@ export type Workout = {
   exercises: LoggedExercise[];
 };
 export type Database = {
+  bodyProfile?: BodyProfile;
   substances?: Substance[];
   substanceBlends?: SubstanceBlend[];
   version: 1;
@@ -147,6 +158,7 @@ export const routineDraftKey = (routine: Routine) =>
       muscles: muscleLinksKey(exercise.muscles),
       reps: exercise.reps,
       rests: exercise.reps.map((_, i) => exercise.rests?.[i] ?? ''),
+      energyModel: exercise.energyModel,
     })),
   });
 export const validWeight = (value: string) =>
@@ -154,12 +166,39 @@ export const validWeight = (value: string) =>
 export const validBodyWeight = (value: string) =>
   Number.isFinite(numberValue(value)) && numberValue(value) > 0 && numberValue(value) <= 999;
 export function previousBodyWeight(history: readonly Workout[]): string {
-  const latest = history.reduce<Workout | undefined>((best, workout) => {
-    if (!workout.finishedAt || !workout.bodyWeight || !validBodyWeight(workout.bodyWeight))
-      return best;
-    return !best || Date.parse(workout.finishedAt) > Date.parse(best.finishedAt!) ? workout : best;
-  }, undefined);
-  return latest?.bodyWeight ?? '';
+  return latestBodyWeight(history)?.weight ?? '';
+}
+export type BodyWeightRecord = {
+  weight: string;
+  recordedAt?: string;
+  source: 'profile' | 'history';
+};
+export function latestBodyWeight(
+  history: readonly Workout[],
+  profile?: BodyProfile,
+): BodyWeightRecord | undefined {
+  let latest: BodyWeightRecord | undefined =
+    profile?.weightKg && validBodyWeight(profile.weightKg)
+      ? { weight: profile.weightKg, recordedAt: profile.weightRecordedAt, source: 'profile' }
+      : undefined;
+  for (const workout of history) {
+    if (
+      !workout.finishedAt ||
+      !Number.isFinite(Date.parse(workout.finishedAt)) ||
+      !workout.bodyWeight ||
+      !validBodyWeight(workout.bodyWeight)
+    )
+      continue;
+    if (!latest?.recordedAt || Date.parse(workout.finishedAt) >= Date.parse(latest.recordedAt))
+      latest = { weight: workout.bodyWeight, recordedAt: workout.finishedAt, source: 'history' };
+  }
+  return latest;
+}
+export function bodyWeightIsStale(record: BodyWeightRecord | undefined, now: Date): boolean {
+  return (
+    !!record &&
+    (!record.recordedAt || now.getTime() - Date.parse(record.recordedAt) > 7 * 24 * 60 * 60 * 1000)
+  );
 }
 export function bodyWeightHistory(
   history: readonly Workout[],
@@ -184,6 +223,10 @@ export function routineError(routine: Routine): string | null {
   if (!routine.name.trim()) return 'Dê um nome para a rotina.';
   if (!routine.exercises.length) return 'Adicione pelo menos um exercício.';
   for (const [index, exercise] of routine.exercises.entries()) {
+    if (exercise.energyModel !== undefined) {
+      const error = energyModelError(exercise.energyModel);
+      if (error) return `${exercise.name || `Exercício ${index + 1}`}: ${error}`;
+    }
     if (exercise.note !== undefined && !validExerciseNote(exercise.note))
       return `Use até 300 caracteres nas observações de ${exercise.name}.`;
     if (exercise.muscles !== undefined && !validMuscleLinks(exercise.muscles))
@@ -325,18 +368,28 @@ export function suggestsLoadDecrease(
     return belowHalf > exercise.sets.length / 2;
   });
 }
-export function startWorkout(routine: Routine, history: readonly Workout[] = []): Workout {
+export function startWorkout(
+  routine: Routine,
+  history: readonly Workout[] = [],
+  profile?: BodyProfile,
+): Workout {
   const previous = previousRoutineWorkouts(history, routine.id)[0];
   const previousExercises = new Map(previous?.exercises.map((exercise) => [exercise.id, exercise]));
+  const weight = latestBodyWeight(history, profile)?.weight;
 
   return {
     id: uid(),
     routineId: routine.id,
     name: routine.name,
     startedAt: new Date().toISOString(),
+    ...(profile?.heightCm ? { bodyHeight: profile.heightCm } : {}),
+    ...(weight ? { bodyWeight: weight } : {}),
     exercises: routine.exercises.map((exercise) => ({
       id: exercise.id,
       name: exercise.name,
+      ...(exercise.energyModel
+        ? { energyModel: JSON.parse(JSON.stringify(exercise.energyModel)) as EnergyModel }
+        : {}),
       ...(exercise.note ? { note: exercise.note } : {}),
       ...(exercise.muscles ? { muscles: exercise.muscles.map((link) => ({ ...link })) } : {}),
       sets: exercise.reps.map((target, index) => {
@@ -479,18 +532,24 @@ export function workoutError(workout: Workout): string | null {
     return 'Confira as repetições e a carga das séries concluídas.';
   return null;
 }
-export function finishWorkout(db: Database, bodyWeight = ''): Database {
+export function finishWorkout(db: Database, bodyWeight = '', bodyHeight?: string): Database {
   if (!db.active) throw new Error('Nenhum treino em andamento.');
   const error = workoutError(db.active);
   if (error) throw new Error(error);
   const weight = bodyWeight.trim();
   if (weight && !validBodyWeight(weight))
     throw new Error('Informe um peso maior que 0 e até 999 kg.');
+  if (bodyHeight && !validHeight(bodyHeight)) throw new Error('Informe uma altura de 50 a 250 cm.');
   return {
     ...db,
     active: null,
     workouts: [
-      { ...db.active, bodyWeight: weight || undefined, finishedAt: new Date().toISOString() },
+      {
+        ...db.active,
+        bodyWeight: weight || undefined,
+        ...(bodyHeight !== undefined ? { bodyHeight: bodyHeight || undefined } : {}),
+        finishedAt: new Date().toISOString(),
+      },
       ...db.workouts,
     ],
   };
@@ -545,6 +604,7 @@ export function parseDatabase(raw: string): Database {
         identity(e.id) &&
         string(e.name) &&
         (e.note === undefined || validExerciseNote(e.note)) &&
+        (e.energyModel === undefined || energyModelError(e.energyModel) === null) &&
         (e.muscles === undefined || validMuscleLinks(e.muscles)) &&
         Array.isArray(e.reps) &&
         e.reps.every(string) &&
@@ -563,6 +623,7 @@ export function parseDatabase(raw: string): Database {
     date(w.startedAt) &&
     (w.finishedAt === undefined || date(w.finishedAt)) &&
     (w.bodyWeight === undefined || (string(w.bodyWeight) && validBodyWeight(w.bodyWeight))) &&
+    (w.bodyHeight === undefined || validHeight(w.bodyHeight)) &&
     Array.isArray(w.exercises) &&
     w.exercises.length > 0 &&
     w.exercises.every(
@@ -570,6 +631,7 @@ export function parseDatabase(raw: string): Database {
         e &&
         identity(e.id) &&
         identity(e.name) &&
+        (e.energyModel === undefined || energyModelError(e.energyModel) === null) &&
         (e.note === undefined || validExerciseNote(e.note)) &&
         (e.muscles === undefined || validMuscleLinks(e.muscles)) &&
         (e.loadAdjustment === undefined ||
@@ -597,6 +659,7 @@ export function parseDatabase(raw: string): Database {
     uniqueIds(w.exercises);
   if (
     value?.version !== 1 ||
+    (value.bodyProfile !== undefined && !validProfile(value.bodyProfile)) ||
     (value.substanceBlends !== undefined &&
       (!Array.isArray(value.substanceBlends) ||
         value.substanceBlends.length > 50 ||

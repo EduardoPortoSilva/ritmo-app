@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import {
+  KeyboardScrollView as ScrollView,
+  KeyboardTextInput as TextInput,
+} from './KeyboardScrollView';
 import * as Clipboard from 'expo-clipboard';
 import {
   applyBulkImport,
@@ -9,13 +13,9 @@ import {
   parseBulkImport,
   type BulkPlan,
 } from './bulkImport';
-import { routineDays, weekdays, type Database, type Routine } from './model';
+import { latestBodyWeight, routineDays, weekdays, type Database, type Routine } from './model';
 import { muscleById } from './muscles';
 import { colors as c } from './theme';
-import {
-  KeyboardScrollView as ScrollView,
-  KeyboardTextInput as TextInput,
-} from './KeyboardScrollView';
 import { Button, PageHeader, s } from './ui';
 
 export function BulkImportScreen({
@@ -35,6 +35,7 @@ export function BulkImportScreen({
   const [showGuide, setShowGuide] = useState(false);
   const [showExample, setShowExample] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [requestEnergy, setRequestEnergy] = useState(true);
   useEffect(() => onDirtyChange(!!text.trim()), [text, onDirtyChange]);
   const totalStrength = preview
     ? preview.routines.length +
@@ -66,6 +67,12 @@ export function BulkImportScreen({
               <Text style={s.small}>
                 Descanso: {exercise.rests ? `${exercise.rests.join(' / ')} s` : 'não definido'}
               </Text>
+              {exercise.energyModel && (
+                <Text selectable style={s.small}>
+                  Calorias por série: {exercise.energyModel.formula.expression}
+                  {'\n'}Referência: {exercise.energyModel.formula.reference}
+                </Text>
+              )}
               {!!exercise.muscles?.length && (
                 <Text style={s.small}>
                   Músculos:{' '}
@@ -97,11 +104,29 @@ export function BulkImportScreen({
           JSON retornado. As instruções incluem os IDs musculares aceitos.
         </Text>
         <Button
+          label={
+            requestEnergy
+              ? 'Modelos de calorias: solicitar à IA'
+              : 'Modelos de calorias: não solicitar'
+          }
+          secondary
+          onPress={() => setRequestEnergy(!requestEnergy)}
+        />
+        <Text style={s.small}>
+          Os modelos de força são opcionais e precisam de referência. Configure peso e altura em
+          Dados para estimativas, na aba Rotinas.
+        </Text>
+        <Button
           label="Copiar instruções para IA"
           secondary
           icon="copy"
           onPress={() => {
-            void Clipboard.setStringAsync(bulkImportPrompt)
+            void Clipboard.setStringAsync(
+              bulkImportPrompt +
+                (requestEnergy
+                  ? `\nSolicito modelos de calorias de força quando houver base para o exercício/equipamento. Peso de referência: ${latestBodyWeight(database.workouts, database.bodyProfile)?.weight || 'não informado'} kg; altura: ${database.bodyProfile?.heightCm || 'não informada'} cm. Preserve as variáveis na expressão. Sem base suficiente, omita calorias.`
+                  : '\nNão inclua o campo calorias neste plano.'),
+            )
               .then(() => setMessage('Instruções copiadas.'))
               .catch(() => setMessage('Não foi possível copiar.'));
           }}

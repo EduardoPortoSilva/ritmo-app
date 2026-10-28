@@ -19,6 +19,7 @@ export function backupSummary(database: Database) {
     substances: database.substances?.length ?? 0,
     substanceBlends: database.substanceBlends?.length ?? 0,
     substanceDoses: database.substances?.reduce((sum, item) => sum + item.doses.length, 0) ?? 0,
+    bodyProfile: !!database.bodyProfile,
     activeWorkout: !!database.active,
     activeCardio: !!database.activeCardio,
   };

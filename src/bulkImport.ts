@@ -14,6 +14,7 @@ import {
   type Routine,
 } from './model.ts';
 import { muscleById, muscleCatalog, validMuscleLinks, type MuscleLink } from './muscles.ts';
+import { energyModelError, type EnergyModel } from './energy.ts';
 
 export type BulkPlan = {
   divisions: { id: string; name: string; routines: Routine[] }[];
@@ -66,7 +67,45 @@ const weekdays = (value: unknown, path: string): number[] => {
 
 function exercise(value: unknown, path: string) {
   const data = object(value, path);
-  fields(data, ['nome', 'repeticoes', 'descanso', 'musculos', 'nota'], path);
+  fields(data, ['nome', 'repeticoes', 'descanso', 'musculos', 'nota', 'calorias'], path);
+  let energyModel: EnergyModel | undefined;
+  if (data.calorias !== undefined) {
+    const raw = object(data.calorias, `${path}.calorias`);
+    fields(
+      raw,
+      [
+        'expressao',
+        'passos',
+        'parametros',
+        'referencia',
+        'carga',
+        'multiplicador',
+        'segundosPorRepeticao',
+      ],
+      `${path}.calorias`,
+    );
+    const bases: Record<string, EnergyModel['loadBasis']> = {
+      total: 'total',
+      por_lado: 'per-side',
+      por_halter: 'per-hand',
+      unilateral: 'unilateral',
+    };
+    if (typeof raw.carga !== 'string' || !Object.hasOwn(bases, raw.carga))
+      throw new Error(`${path}.calorias.carga: use total, por_lado, por_halter ou unilateral.`);
+    energyModel = {
+      formula: {
+        expression: raw.expressao as string,
+        steps: raw.passos as string[] | undefined,
+        parameters: raw.parametros as Record<string, number>,
+        reference: raw.referencia as string,
+      },
+      loadBasis: bases[raw.carga],
+      loadMultiplier: raw.multiplicador as number,
+      secondsPerRep: raw.segundosPorRepeticao as number,
+    };
+    const error = energyModelError(energyModel);
+    if (error) throw new Error(`${path}.calorias: ${error}`);
+  }
   if (data.nota !== undefined && !validExerciseNote(data.nota))
     throw new Error(`${path}.nota: use até 300 caracteres.`);
   const reps = list(data.repeticoes, `${path}.repeticoes`);
@@ -104,6 +143,7 @@ function exercise(value: unknown, path: string) {
     reps: reps.map((rep, index) => String(integer(rep, `${path}.repeticoes[${index}]`, 1, 999))),
     ...(rests ? { rests } : {}),
     ...(muscles ? { muscles } : {}),
+    ...(energyModel ? { energyModel } : {}),
   };
 }
 
@@ -292,6 +332,8 @@ export const bulkImportExample = JSON.stringify(
 );
 
 export const bulkImportPrompt = `Gere exclusivamente um JSON válido para importar rotinas no app Ritmo. Não escreva explicações nem comentários. Use o formato exato abaixo, com "formato": "ritmo/1". Você pode omitir divisoes, treinos ou cardios quando vazios, mas inclua pelo menos uma rotina. Todos os nomes devem ter até 80 caracteres. Não invente chaves nem IDs musculares.
+
+Exercício de força pode incluir calorias: {"expressao":"fórmula em kcal por série concluída", "passos":[], "parametros":{}, "referencia":"fonte e hipóteses", "carga":"total", "multiplicador":1, "segundosPorRepeticao":3}. Opcional: omita calorias se não houver modelo fundamentado para o exercício e equipamento; não invente coeficientes nem alegue validação clínica. Variáveis: bodyWeight (kg), height (cm), load (kg digitados), sides (2 em por_lado/por_halter, 1 em total/unilateral), totalLoad = load*sides*multiplicador, reps e seconds = reps*segundosPorRepeticao. carga aceita total, por_lado, por_halter ou unilateral (um lado por série; para os dois lados devem ser registradas séries separadas). multiplicador 0.01..20 representa a relação do equipamento explicitada na referência; segundosPorRepeticao 0.1..60. Resultado corresponde apenas às séries; descansos e pós-treino não entram. Use ponto decimal, + - * / % ^, comparações < <= > >= == != && ||, if(condição,sim,não), exp, ln, log, sqrt, abs, sin, cos, min, max, pow, clamp, floor, ceil, round, pi e e. Até 4 passos explícitos em passos, cada um com variáveis v1..v4 dos passos anteriores; expressão final pode usar todos os passos. Sem código, recursão, integrais ou loops. Até 1.200 caracteres por expressão, 256 tokens, 24 níveis e 16 parâmetros finitos de módulo <=1e9, com nomes que não colidam com variáveis, funções ou v1..v4; referencia até 500 caracteres. Não use tempo total da sessão para cada exercício. A carga por lado normalizada não é uma medição da força ou das calorias. Não crie modelos para cardio nesse campo.
 
 Estrutura: divisoes é uma lista de {"nome": texto, "treinos": [treino...]}; treinos é uma lista de treinos avulsos; cardios é uma lista de cardios. Treino: {"nome": texto, "dias": ["seg","ter","qua","qui","sex","sab","dom"], "nota": texto opcional, "exercicios": [exercicio...]}. Dias são opcionais; ausência ou [] significa sem dia fixo. Exercício: {"nome": texto, "repeticoes": [inteiros de 1 a 999], "descanso": inteiro de 0 a 3600 segundos para todas as séries OU lista de um valor por série, "musculos": [{"id": ID do catálogo, "papel": "principal" ou "secundario"}]}. Descanso, músculos e nota são opcionais. Exercício também aceita "nota": texto livre de até 300 caracteres, como Barra W ou máquina. Cada exercício tem 1 a 20 séries. Cardio: {"nome": texto, "dias": lista opcional, "etapas": [{"minutos": número de 0.1 a 60, "velocidade": número de 0 a 40 em km/h}]}. Máximo 50 etapas e 4 horas por cardio. Use números JSON, não números entre aspas. Use nomes de campos sem acentos exatamente como no exemplo. Não inclua cargas/pesos, pois são registrados durante a execução. Se não souber o músculo específico, use o ID do grupo; se não souber o grupo, omita musculos. IDs musculares válidos (ID: nome):
 ${muscleCatalog.map((node) => `${node.id}: ${node.name}`).join('\n')}

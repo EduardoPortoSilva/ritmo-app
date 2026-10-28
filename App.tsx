@@ -27,7 +27,8 @@ import {
   finishWorkout,
   formatNumber,
   newRoutine,
-  previousBodyWeight,
+  latestBodyWeight,
+  bodyWeightIsStale,
   routineError,
   routineDays,
   routinesForDate,
@@ -58,6 +59,7 @@ import {
 import { BulkImportScreen } from './src/BulkImportScreen';
 import { BackupScreen } from './src/BackupScreen';
 import { SubstanceScreen } from './src/SubstanceScreen';
+import { BodyProfileScreen } from './src/EnergyScreens';
 import { assertStorableDatabase } from './src/backupLimits';
 import type { BackupPreview } from './src/backup';
 import { shouldDeferSupplementLink } from './src/navigation';
@@ -137,6 +139,7 @@ type Route =
         | 'backup';
     }
   | { page: 'substances' }
+  | { page: 'body-profile'; returnTo?: 'home' | 'routines' }
   | { page: 'division-editor'; division: DivisionDraft }
   | { page: 'division-detail'; divisionId: string }
   | { page: 'supplement-editor'; supplement: Supplement }
@@ -272,6 +275,18 @@ function Ritmo() {
       setRoute({ page: 'supplements' });
       return;
     }
+    if (route.page === 'body-profile') {
+      const destination = { page: route.returnTo ?? 'routines' } as Route;
+      if (!editorDirty.current) setRoute(destination);
+      else
+        setDialog({
+          title: 'Sair da edição?',
+          message: 'Os dados de referência ainda não foram salvos.',
+          label: 'Descartar alterações',
+          onConfirm: () => setRoute(destination),
+        });
+      return;
+    }
     if (route.page === 'backup') {
       setRoute({ page: 'routines' });
       return;
@@ -402,7 +417,10 @@ function Ritmo() {
       setToast('Continue ou descarte o treino em andamento antes de iniciar outro.');
       return;
     }
-    update((previous) => ({ ...previous, active: startWorkout(routine, previous.workouts) }));
+    update((previous) => ({
+      ...previous,
+      active: startWorkout(routine, previous.workouts, previous.bodyProfile),
+    }));
     setRoute({ page: 'workout' });
   }
   function beginCardio(routine: CardioRoutine) {
@@ -522,7 +540,10 @@ function Ritmo() {
       setDialog({ title: 'Falta registrar suas séries', message: error });
       return;
     }
-    setRoute({ page: 'finish', initialWeight: previousBodyWeight(db.workouts) });
+    setRoute({
+      page: 'finish',
+      initialWeight: latestBodyWeight(db.workouts, db.bodyProfile)?.weight ?? '',
+    });
   }
   function addSupplement() {
     setRoute({
@@ -612,6 +633,8 @@ function Ritmo() {
     [effort],
   );
   const supplements = db.supplements ?? [];
+  const latestWeight = latestBodyWeight(db.workouts, db.bodyProfile);
+  const staleWeight = bodyWeightIsStale(latestWeight, today);
   const takenToday = supplements.filter((item) => item.takenOn.includes(dayKey(today))).length;
   const visibleRoutines = activeRoutines(db);
   const pausedStrength = db.strengthPaused === true;
@@ -648,6 +671,7 @@ function Ritmo() {
     );
   const subpage = [
     'substances',
+    'body-profile',
     'coverage',
     'cardio',
     'cardio-editor',
@@ -713,6 +737,19 @@ function Ritmo() {
                 const next = { ...current, substances };
                 assertStorableDatabase(JSON.stringify(next));
                 update(next);
+              }}
+            />
+          ) : route.page === 'body-profile' ? (
+            <BodyProfileScreen
+              initial={db.bodyProfile}
+              latestWeight={latestWeight}
+              onBack={back}
+              onDirtyChange={onDirtyChange}
+              onSave={(bodyProfile) => {
+                update((previous) => ({ ...previous, bodyProfile }));
+                editorDirty.current = false;
+                setRoute({ page: route.returnTo ?? 'routines' });
+                setToast('Dados de referência salvos.');
               }}
             />
           ) : route.page === 'backup' ? (
@@ -998,10 +1035,10 @@ function Ritmo() {
             <FinishWorkoutScreen
               key={db.active.id}
               workout={db.active}
-              initialWeight={route.initialWeight}
+              initialWeight={db.active.bodyWeight || route.initialWeight}
               onBack={back}
-              onSave={(weight) => {
-                update((previous) => finishWorkout(previous, weight));
+              onSave={(weight, height) => {
+                update((previous) => finishWorkout(previous, weight, height));
                 setRoute({ page: 'history' });
                 setToast('Mais um treino na conta. Mandou bem!');
               }}
@@ -1128,6 +1165,32 @@ function Ritmo() {
                       }}
                     />
                   </View>
+                  {staleWeight && (
+                    <View
+                      style={[s.card, { backgroundColor: c.warningSoft, padding: 14, gap: 8 }]}
+                      testID="body-weight-reminder"
+                    >
+                      <View style={[s.row, { alignItems: 'flex-start' }]}>
+                        <Icon name="alert-circle" color={c.warning} size={20} />
+                        <View style={{ flex: 1, gap: 4 }}>
+                          <Text style={[s.cardTitle, { fontSize: 15 }]}>
+                            Que tal atualizar seu peso?
+                          </Text>
+                          <Text style={s.small}>
+                            {latestWeight?.recordedAt
+                              ? `Seu último registro foi em ${new Date(latestWeight.recordedAt).toLocaleDateString('pt-BR')}, há mais de uma semana.`
+                              : 'Seu peso salvo ainda não tem data. Confirme uma pesagem recente.'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Button
+                        label="Atualizar peso"
+                        secondary
+                        icon="edit-2"
+                        onPress={() => setRoute({ page: 'body-profile', returnTo: 'home' })}
+                      />
+                    </View>
+                  )}
                   {hasSchedule && (
                     <View style={s.card} testID="today-routines">
                       <Text style={s.cardTitle}>Treinos de hoje</Text>
@@ -1545,6 +1608,12 @@ function Ritmo() {
                     icon="plus"
                     secondary
                     onPress={() => setRoute({ page: 'editor', routine: newRoutine() })}
+                  />
+                  <Button
+                    label="Dados para estimativas"
+                    icon="user"
+                    secondary
+                    onPress={() => setRoute({ page: 'body-profile' })}
                   />
                   {db.active && (
                     <Button
