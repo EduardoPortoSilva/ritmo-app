@@ -1,5 +1,11 @@
 import { isSupplement, type Supplement } from './supplements.ts';
 import {
+  previousExerciseOrder,
+  validExerciseOrder,
+  type ExerciseOrderCheck,
+  type PreviousExerciseOrder,
+} from './exerciseOrder.ts';
+import {
   energyModelError,
   validHeight,
   validProfile,
@@ -71,6 +77,9 @@ export type LoggedExercise = {
   externalImpediment?: boolean;
 };
 export type Workout = {
+  orderChecks?: ExerciseOrderCheck[];
+  previousOrder?: PreviousExerciseOrder;
+  orderNoticesSeen?: string[];
   bodyHeight?: string;
   id: string;
   routineId: string;
@@ -379,12 +388,17 @@ export function startWorkout(
   const previous = previousRoutineWorkouts(history, routine.id)[0];
   const previousExercises = new Map(previous?.exercises.map((exercise) => [exercise.id, exercise]));
   const weight = latestBodyWeight(history, profile)?.weight;
+  const previousOrder = previousExerciseOrder(
+    previous,
+    routine.exercises.map((exercise) => exercise.id),
+  );
 
   return {
     id: uid(),
     routineId: routine.id,
     name: routine.name,
     startedAt: new Date().toISOString(),
+    ...(previousOrder ? { previousOrder } : {}),
     ...(profile?.heightCm ? { bodyHeight: profile.heightCm } : {}),
     ...(weight ? { bodyWeight: weight } : {}),
     exercises: routine.exercises.map((exercise) => ({
@@ -662,7 +676,8 @@ export function parseDatabase(raw: string): Database {
         ) &&
         uniqueIds(e.sets),
     ) &&
-    uniqueIds(w.exercises);
+    uniqueIds(w.exercises) &&
+    validExerciseOrder(w);
   if (
     value?.version !== 1 ||
     (value.bodyProfile !== undefined && !validProfile(value.bodyProfile)) ||

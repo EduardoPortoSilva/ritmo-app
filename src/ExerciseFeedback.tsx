@@ -5,6 +5,8 @@ import { loadAdjustments, type LoggedExercise, type LoadAdjustment } from './mod
 import { Icon, s } from './ui';
 import { colors as c } from './theme';
 import { ExplanationModal } from './ExplanationModal';
+import { ExerciseOrderStatus } from './ExerciseOrderNotice';
+import type { ExerciseOrderChange } from './exerciseOrder';
 
 type FeedbackKind = keyof typeof loadAdjustments | 'cramp' | 'external';
 const feedbackColors = {
@@ -99,18 +101,21 @@ export function ExerciseFeedbackStatus({
   previous = false,
   suggestedAdjustment,
   executionCaution = false,
+  orderChanges = [],
 }: {
   exercise?: LoggedExercise;
   previous?: boolean;
   suggestedAdjustment?: Extract<LoadAdjustment, 'increase' | 'decrease'>;
   executionCaution?: boolean;
+  orderChanges?: readonly ExerciseOrderChange[];
 }) {
   const [explaining, setExplaining] = useState<FeedbackKind | null>(null);
   if (
     !exercise?.loadAdjustment &&
     !exercise?.cramp &&
     !exercise?.externalImpediment &&
-    !suggestedAdjustment
+    !suggestedAdjustment &&
+    !orderChanges.length
   )
     return null;
   const kinds: FeedbackKind[] = [
@@ -152,6 +157,13 @@ export function ExerciseFeedbackStatus({
         {suggestedAdjustment && (
           <AutomaticLoadHint adjustment={suggestedAdjustment} caution={executionCaution} />
         )}
+        {orderChanges.map((change) => (
+          <ExerciseOrderStatus
+            key={JSON.stringify([change.beforeId, change.afterId])}
+            change={change}
+            previous={previous}
+          />
+        ))}
       </View>
       {explaining && (
         <ExplanationModal

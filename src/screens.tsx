@@ -40,6 +40,15 @@ import { MusclePicker, MuscleLinksSummary } from './MusclePicker';
 import { ExerciseMuscleModal } from './ExerciseMuscleModal';
 import { EnergyModelControl, EnergySummary } from './EnergyScreens';
 import { CurrentSetCard } from './CurrentSetCard';
+import { OrderConfirmation, OrderChangesExplanation } from './ExerciseOrderNotice';
+import {
+  newOrderChecks,
+  pendingOrderChecks,
+  answerOrderChecks,
+  describeOrderChecks,
+  confirmedOrderChanges,
+  orderChangesFor,
+} from './exerciseOrder';
 import { validHeight } from './energy';
 import {
   currentWorkoutSet,
@@ -575,11 +584,15 @@ export function WorkoutScreen({
   const exerciseCardTop = useRef<number | null>(null);
   const setPositions = useRef(new Map<string, number>());
   const currentSet = currentWorkoutSet(workout);
+  const pendingOrder = pendingOrderChecks(workout);
+  const confirmedOrder = confirmedOrderChanges(workout);
   const visibleIndices = visibleExerciseIndices(workout, hideCompleted);
   const selectedIndex = visibleIndices.includes(exerciseIndex)
     ? exerciseIndex
     : (visibleIndices.find((index) => index > exerciseIndex) ?? visibleIndices[0] ?? -1);
   const exercise = workout.exercises[selectedIndex];
+  const previousOrder = orderChangesFor(workout.previousOrder?.changes ?? [], exercise?.id ?? '');
+  const unseenOrder = previousOrder.length > 0 && !workout.orderNoticesSeen?.includes(exercise?.id);
   const visiblePosition = visibleIndices.indexOf(selectedIndex);
   const previousIndex = visibleIndices[visiblePosition - 1];
   const nextIndex = visibleIndices[visiblePosition + 1];
@@ -745,8 +758,12 @@ export function WorkoutScreen({
       ...exercise,
       sets: exercise.sets.map((item) => (item.id === set.id ? { ...item, done: !set.done } : item)),
     };
+    const orderChecks = newOrderChecks(workout, exercise.id, set.id);
     onChange({
       ...workout,
+      ...(orderChecks.length
+        ? { orderChecks: [...(workout.orderChecks ?? []), ...orderChecks] }
+        : {}),
       exercises: workout.exercises.map((item) =>
         item.id === exercise.id ? changedExercise : item,
       ),
@@ -931,6 +948,7 @@ export function WorkoutScreen({
             <ExerciseFeedbackStatus
               key={`previous-feedback-${exercise.id}`}
               exercise={previousExercise}
+              orderChanges={previousOrder}
               previous
               suggestedAdjustment={
                 suggestDecrease ? 'decrease' : suggestIncrease ? 'increase' : undefined
@@ -944,6 +962,7 @@ export function WorkoutScreen({
                   (set.longRest || set.restPause || set.cramp),
               )}
             />
+            <ExerciseFeedbackStatus orderChanges={orderChangesFor(confirmedOrder, exercise.id)} />
             <View style={s.sectionHeader} testID="exercise-note-summary">
               <Text style={[s.small, { flex: 1 }]}>
                 {exercise.note?.trim() ? `Observações: ${exercise.note}` : 'Adicionar observação'}
@@ -1185,6 +1204,22 @@ export function WorkoutScreen({
           />
         )}
       </ScrollView>
+      {pendingOrder.length > 0 ? (
+        <OrderConfirmation
+          changes={describeOrderChecks(workout, pendingOrder)}
+          onAnswer={(confirmed) => onChange(answerOrderChecks(workout, confirmed))}
+        />
+      ) : unseenOrder ? (
+        <OrderChangesExplanation
+          changes={previousOrder}
+          onClose={() =>
+            onChange({
+              ...workout,
+              orderNoticesSeen: [...(workout.orderNoticesSeen ?? []), exercise.id],
+            })
+          }
+        />
+      ) : null}
     </View>
   );
 }
@@ -1332,7 +1367,10 @@ export function WorkoutDetail({
               onPress={() => setMusclePreviewId(exercise.id)}
             />
           </View>
-          <ExerciseFeedbackStatus exercise={exercise} />
+          <ExerciseFeedbackStatus
+            exercise={exercise}
+            orderChanges={orderChangesFor(confirmedOrderChanges(workout), exercise.id)}
+          />
           {!!exercise.note && <Text style={s.body}>Observações: {exercise.note}</Text>}
           {exercise.sets.map((set, i) => (
             <View key={set.id}>
