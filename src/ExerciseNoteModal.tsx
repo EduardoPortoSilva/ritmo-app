@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Modal, Platform, Text, View } from 'react-native';
+import { KeyboardScrollView as ScrollView } from './KeyboardScrollView';
 import type { LoggedExercise } from './model';
 import { Button, Field, IconButton, s } from './ui';
 

@@ -8,7 +8,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import Feather from '@expo/vector-icons/Feather';
 import { useFonts } from 'expo-font';
 import { colors as c } from './src/theme';
+import { KeyboardScrollView as ScrollView } from './src/KeyboardScrollView';
 import {
   allSets,
   cleanRoutine,
@@ -688,7 +688,7 @@ function Ritmo() {
         )}
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           {route.page === 'backup' ? (
             <BackupScreen

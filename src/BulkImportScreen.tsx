@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {
   applyBulkImport,
@@ -12,6 +12,10 @@ import {
 import { routineDays, weekdays, type Database, type Routine } from './model';
 import { muscleById } from './muscles';
 import { colors as c } from './theme';
+import {
+  KeyboardScrollView as ScrollView,
+  KeyboardTextInput as TextInput,
+} from './KeyboardScrollView';
 import { Button, PageHeader, s } from './ui';
 
 export function BulkImportScreen({

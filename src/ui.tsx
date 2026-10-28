@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardTextInput as TextInput } from './KeyboardScrollView';
 import Feather from '@expo/vector-icons/Feather';
 import { colors as c } from './theme';
 export type IconName = React.ComponentProps<typeof Feather>['name'];

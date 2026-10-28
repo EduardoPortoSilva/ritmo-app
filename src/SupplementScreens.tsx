@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { colors as c } from './theme';
+import { KeyboardScrollView as ScrollView } from './KeyboardScrollView';
 import { Button, Field, Icon, IconButton, PageHeader, s } from './ui';
 import { dayKey, recentSupplementDays, supplementStreak, type Supplement } from './supplements';
 import { remindersAvailable } from './reminders';

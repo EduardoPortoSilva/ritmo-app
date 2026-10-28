@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, Text, View } from 'react-native';
+import {
+  KeyboardScrollView as ScrollView,
+  KeyboardTextInput as TextInput,
+} from './KeyboardScrollView';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
 import { startBackgroundRestCue, stopBackgroundRestCue } from './restCue';

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
+import { KeyboardScrollView as ScrollView } from './KeyboardScrollView';
 import {
   divisionDraftKey,
   divisionError,

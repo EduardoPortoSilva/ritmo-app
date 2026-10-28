@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { KeyboardScrollView as ScrollView } from './KeyboardScrollView';
 import { useKeepAwake } from 'expo-keep-awake';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import { weekdays } from './model';

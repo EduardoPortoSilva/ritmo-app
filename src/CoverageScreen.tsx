@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { KeyboardScrollView as ScrollView } from './KeyboardScrollView';
 import type { Routine } from './model';
 import {
   ancestors,
