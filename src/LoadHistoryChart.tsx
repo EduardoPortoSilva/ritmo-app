@@ -1,13 +1,42 @@
 import React, { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { bodyWeightHistory, formatNumber, type ExerciseLoadRecord, type Workout } from './model';
 import { colors as c } from './theme';
 import { s } from './ui';
 
 const plotHeight = 120;
-const labelHeight = 42;
 const repsColor = '#80509A';
 const totalColor = '#A64B16';
+
+function ChartViewport({
+  fit,
+  onLayout,
+  children,
+}: {
+  fit: boolean;
+  onLayout: (event: LayoutChangeEvent) => void;
+  children: React.ReactNode;
+}) {
+  const scroll = useRef<ScrollView>(null);
+  if (fit)
+    return (
+      <View testID="body-weight-plot" onLayout={onLayout} style={{ flex: 1, minWidth: 0 }}>
+        {children}
+      </View>
+    );
+  return (
+    <ScrollView
+      ref={scroll}
+      horizontal
+      onLayout={onLayout}
+      onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: false })}
+      showsHorizontalScrollIndicator
+      style={{ flex: 1 }}
+    >
+      {children}
+    </ScrollView>
+  );
+}
 
 function ChartLine({
   x,
@@ -113,7 +142,7 @@ function HistoryChart({
   bodyWeight?: boolean;
 }) {
   const [width, setWidth] = useState(0);
-  const scroll = useRef<ScrollView>(null);
+  const labelHeight = bodyWeight ? 24 : 42;
   const points = records;
   const minimum = bodyWeight
     ? Math.max(
@@ -134,7 +163,11 @@ function HistoryChart({
     ? ['weight']
     : ['weight', 'reps', 'total'];
   // Each session gets one equal-width category, regardless of elapsed time.
-  const columnWidth = Math.max(bodyWeight ? 76 : 100, width / Math.max(points.length, 1));
+  const columnWidth = bodyWeight
+    ? width / Math.max(points.length, 1)
+    : Math.max(100, width / Math.max(points.length, 1));
+  const dense = bodyWeight && columnWidth < 44;
+  const labelStep = dense ? Math.ceil(66 / Math.max(columnWidth, 1)) : 1;
   return (
     <View
       style={s.progressCard}
@@ -189,13 +222,9 @@ function HistoryChart({
             </Text>
           ))}
         </View>
-        <ScrollView
-          ref={scroll}
-          horizontal
+        <ChartViewport
+          fit={bodyWeight}
           onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-          onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: false })}
-          showsHorizontalScrollIndicator
-          style={{ flex: 1 }}
         >
           <View style={{ flexDirection: 'row' }}>
             {[0, 0.5, 1].map((fraction) => (
@@ -224,7 +253,15 @@ function HistoryChart({
                   />
                 )),
             )}
-            {points.map((point) => {
+            {points.map((point, index) => {
+              const showLabel =
+                index === 0 ||
+                index === points.length - 1 ||
+                (index % labelStep === 0 && points.length - 1 - index >= labelStep);
+              const labelAlign =
+                index === 0 ? 'left' : index === points.length - 1 ? 'right' : 'center';
+              const labelPosition =
+                index === 0 ? { left: 0 } : index === points.length - 1 ? { right: 0 } : {};
               const date = new Date(point.date);
               const dateLabel = date.toLocaleDateString('pt-BR');
               const height = heightFor(point.weight);
@@ -243,13 +280,31 @@ function HistoryChart({
                   accessibilityLabel={`${dateLabel}, ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}: ${formatNumber(point.weight)} kg${bodyWeight ? '' : `, ${point.reps} repetições, carga efetiva total ${formatNumber(point.total ?? 0)} kg·repetições`}`}
                   style={{ width: columnWidth, alignItems: 'center', paddingBottom: 8 }}
                 >
-                  <View style={styles.column}>
-                    <Text style={[styles.value, { bottom: height + 9 }]}>
-                      {formatNumber(point.weight)}
-                    </Text>
+                  <View style={[styles.column, { height: plotHeight + labelHeight }]}>
+                    {showLabel && (
+                      <Text
+                        style={[
+                          styles.value,
+                          { bottom: height + 9 },
+                          dense && { width: 44, textAlign: labelAlign, ...labelPosition },
+                        ]}
+                      >
+                        {formatNumber(point.weight)}
+                      </Text>
+                    )}
                     <View
                       testID={`${prefix}-point-${point.workoutId}`}
-                      style={[styles.point, { bottom: height - 5 }]}
+                      style={[
+                        styles.point,
+                        { bottom: height - 5 },
+                        bodyWeight &&
+                          columnWidth < 12 && {
+                            width: 6,
+                            height: 6,
+                            borderWidth: 1,
+                            bottom: height - 3,
+                          },
+                      ]}
                     />
                     {!bodyWeight && (
                       <>
@@ -275,10 +330,32 @@ function HistoryChart({
                       </>
                     )}
                   </View>
-                  <Text style={styles.date}>
-                    {date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                  </Text>
-                  <Text style={styles.year}>{date.getFullYear()}</Text>
+                  <View
+                    style={[
+                      bodyWeight && { minHeight: 38 },
+                      dense &&
+                        showLabel && {
+                          width: 44,
+                          alignSelf:
+                            index === 0
+                              ? 'flex-start'
+                              : index === points.length - 1
+                                ? 'flex-end'
+                                : 'center',
+                        },
+                    ]}
+                  >
+                    {showLabel && (
+                      <>
+                        <Text style={[styles.date, { textAlign: dense ? labelAlign : 'center' }]}>
+                          {date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        </Text>
+                        <Text style={[styles.year, { textAlign: dense ? labelAlign : 'center' }]}>
+                          {date.getFullYear()}
+                        </Text>
+                      </>
+                    )}
+                  </View>
                   {!bodyWeight && (
                     <Text
                       testID={`total-load-record-${point.workoutId}`}
@@ -295,7 +372,7 @@ function HistoryChart({
               );
             })}
           </View>
-        </ScrollView>
+        </ChartViewport>
         {!bodyWeight && (
           <View style={[styles.axis, { width: 64 }]} testID="total-load-axis">
             {[totalMaximum, totalMaximum / 2, 0].map((value, index) => (
@@ -321,7 +398,7 @@ function HistoryChart({
         {bodyWeight
           ? 'Peso corporal em kg · um ponto por registro.'
           : 'Cada data representa um treino. Total = soma de repetições × carga das séries concluídas; valores em laranja abaixo das datas.'}
-        {points.length > 3 ? ' Deslize para ver o histórico.' : ''}
+        {!bodyWeight && points.length > 3 ? ' Deslize para ver o histórico.' : ''}
       </Text>
     </View>
   );
@@ -335,7 +412,6 @@ const styles = StyleSheet.create({
   tick: { position: 'absolute', right: 8, color: c.muted, fontSize: 10 },
   grid: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#D5DCCC' },
   column: {
-    height: plotHeight + labelHeight,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'flex-end',
