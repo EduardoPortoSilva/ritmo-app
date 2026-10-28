@@ -35,6 +35,7 @@ import { colors as c } from './theme';
 import { WorkoutHistoryModal } from './WorkoutHistoryModal';
 import { ExerciseNoteModal } from './ExerciseNoteModal';
 import { ExerciseFeedbackControls, ExerciseFeedbackStatus } from './ExerciseFeedback';
+import { SetComparison, SetExecutionControls, SetExecutionSummary } from './SetExecutionDetails';
 import { MusclePicker, MuscleLinksSummary } from './MusclePicker';
 import { ExerciseMuscleModal } from './ExerciseMuscleModal';
 import { EnergyModelControl, EnergySummary } from './EnergyScreens';
@@ -553,6 +554,7 @@ export function WorkoutScreen({
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [chartOpen, setChartOpen] = useState(false);
   const [noteEditorOpen, setNoteEditorOpen] = useState(false);
+  const [expandedSetId, setExpandedSetId] = useState<string | null>(null);
   const [musclePreviewId, setMusclePreviewId] = useState<string | null>(null);
   const [restTimer, setRestTimer] = useState<RestTimer | null>(null);
   const [now, setNow] = useState(Date.now);
@@ -632,6 +634,7 @@ export function WorkoutScreen({
     Keyboard.dismiss();
     setChartOpen(false);
     setNoteEditorOpen(false);
+    setExpandedSetId(null);
     setExerciseIndex(index);
     scroll.current?.scrollTo({ y: 0, animated: false });
   }
@@ -753,11 +756,20 @@ export function WorkoutScreen({
             />
           </View>
           <ExerciseFeedbackStatus
+            key={`previous-feedback-${exercise.id}`}
             exercise={previousExercise}
             previous
             suggestedAdjustment={
               suggestDecrease ? 'decrease' : suggestIncrease ? 'increase' : undefined
             }
+            executionCaution={previousExercise?.sets.some(
+              (set, index) =>
+                index < exercise.sets.length &&
+                set.done &&
+                validReps(set.reps) &&
+                validWeight(set.weight) &&
+                (set.longRest || set.restPause || set.cramp),
+            )}
           />
           <View style={s.sectionHeader} testID="exercise-note-summary">
             <Text style={[s.small, { flex: 1 }]}>
@@ -779,7 +791,7 @@ export function WorkoutScreen({
             <Text style={[s.tableHeading, { width: 46, textAlign: 'center' }]}>FEITO</Text>
           </View>
           {exercise.sets.map((set, i) => (
-            <View key={set.id}>
+            <View key={set.id} testID={`workout-set-${set.id}`}>
               <View style={[s.setRow, s.setEntry]}>
                 <View
                   pointerEvents="none"
@@ -807,8 +819,29 @@ export function WorkoutScreen({
                     placeholder="0"
                     placeholderTextColor={c.muted}
                     onChangeText={(weight) => patch(exercise.id, set.id, { weight, done: false })}
-                    style={s.setInput}
+                    style={[
+                      s.setInput,
+                      (set.longRest || set.restPause || set.cramp) && {
+                        height: 46,
+                        paddingTop: 3,
+                        paddingBottom: 15,
+                      },
+                    ]}
                   />
+                  {(set.longRest || set.restPause || set.cramp) && (
+                    <View
+                      pointerEvents="none"
+                      style={{
+                        position: 'absolute',
+                        bottom: 4,
+                        left: 0,
+                        right: 0,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <SetExecutionSummary set={set} current />
+                    </View>
+                  )}
                 </View>
                 <Pressable
                   accessibilityRole="checkbox"
@@ -833,20 +866,12 @@ export function WorkoutScreen({
                   <Icon name="check" color={set.done ? c.lime : c.muted} size={19} />
                 </Pressable>
               </View>
-              <View
-                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingLeft: 44 }}
-                testID={`set-comparison-${i + 1}`}
-              >
-                <Text style={[s.small, { fontSize: 11 }]}>meta: {set.target}</Text>
-                <Text style={[s.small, { fontSize: 11 }]}>
-                  {(() => {
-                    const last = previousExercise?.sets[i];
-                    return last?.done && validReps(last.reps) && validWeight(last.weight)
-                      ? `Última: ${last.reps} reps × ${formatNumber(Number(last.weight.replace(',', '.')))} kg`
-                      : 'Última: sem série concluída';
-                  })()}
-                </Text>
-              </View>
+              <SetComparison
+                target={set.target}
+                last={previousExercise?.sets[i]}
+                warnOnIncrease={suggestIncrease}
+                index={i}
+              />
               <View style={[s.row, { justifyContent: 'space-between', paddingTop: 5 }]}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.small}>{`Série ${i + 1} · ${restLabel(set.rest)}`}</Text>
@@ -862,6 +887,24 @@ export function WorkoutScreen({
                     </Text>
                   )}
                 </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Detalhes de ${exercise.name} série ${i + 1}`}
+                  accessibilityHint="Abrir ou recolher as marcações de descanso longo, rest-pause e cãibra desta série."
+                  accessibilityState={{ expanded: expandedSetId === set.id }}
+                  aria-expanded={expandedSetId === set.id}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setExpandedSetId((current) => (current === set.id ? null : set.id));
+                  }}
+                  style={s.iconButton}
+                >
+                  <Icon
+                    name={expandedSetId === set.id ? 'minus' : 'plus'}
+                    size={18}
+                    color={set.longRest || set.restPause || set.cramp ? c.dark : c.muted}
+                  />
+                </Pressable>
                 {set.rest !== undefined && Number(set.rest) > 0 && (
                   <IconButton
                     name={
@@ -885,6 +928,13 @@ export function WorkoutScreen({
                   />
                 )}
               </View>
+              {expandedSetId === set.id && (
+                <SetExecutionControls
+                  set={set}
+                  seriesLabel={`${exercise.name} série ${i + 1}`}
+                  onChange={(changes) => patch(exercise.id, set.id, changes)}
+                />
+              )}
             </View>
           ))}
         </View>
@@ -1113,6 +1163,7 @@ export function WorkoutDetail({
                 />
               </View>
               <Text style={s.small}>{restLabel(set.rest)}</Text>
+              <SetExecutionSummary set={set} />
             </View>
           ))}
         </View>

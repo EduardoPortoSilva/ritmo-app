@@ -48,6 +48,9 @@ export type LoggedSet = {
   weight: string;
   done: boolean;
   rest?: string;
+  longRest?: boolean;
+  restPause?: boolean;
+  cramp?: boolean;
 };
 export const loadAdjustments = {
   increase: 'Aumentar carga',
@@ -63,7 +66,7 @@ export type LoggedExercise = {
   sets: LoggedSet[];
   muscles?: MuscleLink[];
   loadAdjustment?: LoadAdjustment;
-  // Legacy persisted name: this flag now covers any impediment, including fatigue or cramps.
+  // Legacy exercise-wide impediment; new cramps are recorded on LoggedSet.
   cramp?: boolean;
   externalImpediment?: boolean;
 };
@@ -651,6 +654,9 @@ export function parseDatabase(raw: string): Database {
             string(s.reps) &&
             string(s.weight) &&
             (s.rest === undefined || (string(s.rest) && validRest(s.rest))) &&
+            (s.longRest === undefined || typeof s.longRest === 'boolean') &&
+            (s.restPause === undefined || typeof s.restPause === 'boolean') &&
+            (s.cramp === undefined || typeof s.cramp === 'boolean') &&
             typeof s.done === 'boolean' &&
             (!s.done || (validReps(s.reps) && validWeight(s.weight))),
         ) &&

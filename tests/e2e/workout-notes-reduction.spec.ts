@@ -30,7 +30,7 @@ test('redução automática por duas sessões e exclusão de impedimento externo
     page.getByTestId('exercise-feedback-status').getByTestId('load-reduction-hint'),
   ).toBeVisible();
   await expect(
-    page.getByRole('img', { name: 'Sugestão do app: Diminuir carga', exact: true }),
+    page.getByRole('button', { name: 'Sugestão do app: Diminuir carga', exact: true }),
   ).toBeVisible();
   await expect(page.getByTestId('load-progression-hint')).toHaveCount(0);
   await expect(page.getByLabel('Supino série 1 carga em kg', { exact: true })).toHaveValue('20');
@@ -48,7 +48,7 @@ test('redução automática por duas sessões e exclusão de impedimento externo
   await page.getByRole('button', { name: 'Continuar treino', exact: true }).click();
   await expect(page.getByTestId('load-reduction-hint')).toHaveCount(0);
   await expect(
-    page.getByRole('img', { name: 'Último treino: Impedimento externo', exact: true }),
+    page.getByRole('button', { name: 'Último treino: Impedimento externo', exact: true }),
   ).toBeVisible();
 });
 

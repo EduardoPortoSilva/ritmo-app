@@ -32,10 +32,10 @@ test('lembretes por exercício, comparação por série e retomada até a próxi
   await expect(page.getByTestId('set-comparison-1')).toContainText('Última: 13 reps × 10 kg');
   await expect(page.getByTestId('set-comparison-2')).toContainText('Última: 10 reps × 0 kg');
   await expect(
-    page.getByRole('img', { name: 'Último treino: Aumentar carga', exact: true }),
+    page.getByRole('button', { name: 'Último treino: Aumentar carga', exact: true }),
   ).toHaveCount(1);
   await expect(
-    page.getByRole('img', { name: 'Último treino: Impedimento', exact: true }),
+    page.getByRole('button', { name: 'Último treino: Impedimento', exact: true }),
   ).toHaveCount(1);
   await expect(page.getByTestId('exercise-feedback-status')).toHaveCount(1);
   const statusBounds = await page.getByTestId('exercise-feedback-status').boundingBox();
@@ -55,7 +55,9 @@ test('lembretes por exercício, comparação por série e retomada até a próxi
   const increase = page.getByRole('checkbox', { name: 'Aumentar carga para Supino', exact: true });
   const maintain = page.getByRole('checkbox', { name: 'Manter carga para Supino', exact: true });
   const decrease = page.getByRole('checkbox', { name: 'Diminuir carga para Supino', exact: true });
-  const cramp = page.getByRole('checkbox', { name: 'Impedimento para Supino', exact: true });
+  await expect(
+    page.getByRole('checkbox', { name: 'Impedimento para Supino', exact: true }),
+  ).toHaveCount(0);
   const external = page.getByRole('checkbox', {
     name: 'Impedimento externo para Supino',
     exact: true,
@@ -68,13 +70,11 @@ test('lembretes por exercício, comparação por série e retomada até a próxi
   await maintain.click();
   await expect(maintain).not.toBeChecked();
   await decrease.click();
-  await cramp.click();
   await external.click();
   await feedbackToggle.click();
   await expect(page.getByTestId('exercise-feedback-content')).toHaveCount(0);
   await feedbackToggle.click();
   await expect(decrease).toBeChecked();
-  await expect(cramp).toBeChecked();
   await expect(external).toBeChecked();
   await page.getByRole('checkbox', { name: 'Concluir Supino série 1', exact: true }).click();
   await page.getByRole('button', { name: 'Próximo', exact: true }).click();
@@ -86,7 +86,6 @@ test('lembretes por exercício, comparação por série e retomada até a próxi
   await expect(feedbackToggle).toHaveAttribute('aria-expanded', 'false');
   await feedbackToggle.click();
   await expect(decrease).toBeChecked();
-  await expect(cramp).toBeChecked();
   await expect(external).toBeChecked();
   await page.getByTestId('exercise-feedback-controls').scrollIntoViewIfNeeded();
   await page.screenshot({
@@ -110,7 +109,6 @@ test('lembretes por exercício, comparação por série e retomada até a próxi
   await expect(feedbackToggle).toHaveAttribute('aria-expanded', 'false');
   await feedbackToggle.click();
   await expect(decrease).toBeChecked();
-  await expect(cramp).toBeChecked();
   await expect(external).toBeChecked();
   await page.getByRole('button', { name: 'Finalizar treino', exact: true }).click();
   await page.getByRole('button', { name: 'Salvar treino', exact: true }).click();
@@ -119,24 +117,23 @@ test('lembretes por exercício, comparação por série e retomada até a próxi
     .first()
     .click();
   await expect(
-    page.getByRole('img', { name: 'Marcado neste treino: Diminuir carga', exact: true }),
+    page.getByRole('button', { name: 'Marcado neste treino: Diminuir carga', exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole('img', { name: 'Marcado neste treino: Impedimento', exact: true }),
-  ).toBeVisible();
+    page.getByRole('button', { name: 'Marcado neste treino: Impedimento', exact: true }),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Voltar', exact: true }).click();
   await page.getByRole('tab', { name: 'Rotinas', exact: true }).click();
   await page.getByRole('button', { name: 'Iniciar treino', exact: true }).click();
   await expect(
-    page.getByRole('img', { name: 'Último treino: Diminuir carga', exact: true }),
+    page.getByRole('button', { name: 'Último treino: Diminuir carga', exact: true }),
   ).toHaveCount(1);
   await expect(page.getByTestId('exercise-feedback-status')).toHaveCount(1);
   await feedbackToggle.click();
   await expect(decrease).not.toBeChecked();
-  await expect(cramp).not.toBeChecked();
   await expect(external).not.toBeChecked();
   await expect(
-    page.getByRole('img', { name: 'Último treino: Impedimento externo', exact: true }),
+    page.getByRole('button', { name: 'Último treino: Impedimento externo', exact: true }),
   ).toHaveCount(1);
   await expect(page.getByTestId('set-comparison-2')).toContainText('Última: sem série concluída');
   await page.screenshot({
@@ -174,7 +171,7 @@ test('ícone de progressão aparece após duas sessões completas com a mesma ca
     page.getByTestId('exercise-feedback-status').getByTestId('load-progression-hint'),
   ).toBeVisible();
   await expect(
-    page.getByRole('img', { name: 'Sugestão do app: Aumentar carga', exact: true }),
+    page.getByRole('button', { name: 'Sugestão do app: Aumentar carga', exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel('Supino série 1 carga em kg', { exact: true })).toHaveValue('10');
   await page.screenshot({
