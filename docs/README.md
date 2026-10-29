@@ -6,6 +6,7 @@ Estes guias fazem parte do repositório e devem funcionar em um clone independen
 
 - [Guia de uso](USO.md): planejamento, execução, histórico e recursos do Android.
 - [Cardio](CARDIO.md): etapas, cronômetro, distância e limites dos avisos.
+- [Fórmulas](FORMULAS.md): substâncias, calorias de força e edição dos modelos existentes em lote por JSON.
 - [Importação por texto](IMPORTACAO.md): contrato completo `ritmo/1`, exemplo e IDs musculares.
 - [Backup e assinatura](BACKUP-E-ASSINATURA.md): exportação, restauração e continuidade da distribuição Android.
 - [Músculos](MUSCULOS.md): catálogo, vínculos, contagens, fontes e limites do mapa.

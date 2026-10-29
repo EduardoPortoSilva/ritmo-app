@@ -1,5 +1,11 @@
 # TODO
 
+## Ordem dos exercícios — pedido em 19/10/2026
+
+- [x] **Detectar mudança na ordem dos exercícios — implementado em 22/10/2026.**
+  - Ao concluir a primeira série de A, perguntar por cada exercício B posterior no cadastro que já esteja inteiramente concluído. Confirmar/recusar cada par separadamente.
+  - No próximo treino, avisar na primeira consulta de cada exercício envolvido; símbolos amarelos de retorno em U opostos, um por par, permitem reabrir a explicação. Sem alterar o cadastro ou as cargas. Evidências e situação do APK em `docs/ESTADO.md`.
+
 ## Atalhos da aba Rotinas — 2026-10-13
 
 - [x] Reunir os seis atalhos em uma grade com três por linha, mantendo Nova divisão separada.

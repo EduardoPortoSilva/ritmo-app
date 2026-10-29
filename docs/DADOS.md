@@ -1,5 +1,15 @@
 # Modelo de dados e persistência
 
+O perfil corporal aceita `weightRecordedAt?: string`, data válida do cadastro/confirmação do peso. `latestBodyWeight` compara essa data com `finishedAt` das sessões com peso válido; empates favorecem o histórico. Perfis antigos sem data são preservados, com preferência por histórico datado e aviso para confirmar quando só há peso sem data. O início sinaliza registros com mais de sete dias. Alterar só altura não renova a pesagem. Campo opcional incluído no backup, sem mudança de versão/chave.
+
+Suplementos aceitam vínculos opcionais `substanceIds: string[]` e `blendIds: string[]`, preservados no backup. Novas ingestões adicionam a data local a `takenOn` dos suplementos vinculados na mesma atualização das doses. Vários vínculos usam a condição “qualquer um”; várias doses no mesmo dia não duplicam a marcação. Editar esses vínculos não reaplica o passado. Excluir doses mantém o registro diário, que pode ser desfeito manualmente. Referências removidas continuam legíveis para correção no editor. Regras em [Fórmulas](FORMULAS.md#marcação-automática-dos-suplementos).
+
+Na direção suplemento → substância, `Supplement.substanceDoses?: {substanceId, amount, unit}[]` define até 30 doses, com IDs únicos, unidade copiada e quantidade textual decimal positiva até 1 bilhão. Novos cliques de confirmação salvam `takenAt?: Record<dia, instanteISO>`; timestamps referenciam dias de `takenOn`, e ausência preserva o desconhecimento de horários antigos. Doses geradas têm origem opcional `SubstanceDose.supplement: {supplementId, supplementName, day, estimatedTime}`; é incompatível com origem de blend na mesma dose. O parser valida os campos e o backup os preserva, sem mudar a versão/chave. A importação retroativa só ocorre após prévia explícita, usando horário real salvo ou média informada; não preenche `takenAt` com a estimativa. Regras em [Fórmulas](FORMULAS.md#dose-configurada-e-histórico-de-suplementos).
+
+Os campos opcionais de substâncias, perfil corporal e modelos de calorias são detalhados em [Fórmulas](FORMULAS.md). `Database` aceita `substances` e `bodyProfile`; exercícios planejados/registrados aceitam `energyModel`; treinos aceitam `bodyHeight`. Sem mudança da versão/chave. O parser valida as expressões e os residuais armazenados, também na restauração de backups.
+
+Misturas salvas usam o campo opcional `substanceBlends`. Uma ingestão de blend gera doses nas substâncias participantes, com horário comum e identificação/cópia da composição em `SubstanceDose.blend` (`src/substances.ts`). A edição da composição não altera ingestões anteriores. O parser confere quantidades, unidades e a identificação de cada dose no grupo; referências a componentes removidos permanecem nas composições para correção, sem invalidar o restante do banco.
+
 Os tipos e o parser de força estão em `src/model.ts`; cardio, suplementos e conjuntos têm regras em `src/cardio.ts`, `src/supplements.ts` e `src/routineSets.ts`. `src/storage.ts` é o ponto de acesso ao AsyncStorage.
 
 ## Banco v1
@@ -32,6 +42,8 @@ Banco vazio mínimo:
 ```
 
 ## Planejamento e snapshots
+
+`Workout` aceita três campos opcionais de ordem (`src/exerciseOrder.ts`): `orderChecks` com pares `{ beforeId, afterId, confirmed: null | boolean }` da própria sessão; `previousOrder` com `{ workoutId, changes }`, cópia dos pares confirmados do último treino da rotina, incluindo IDs e nomes dos dois exercícios; e `orderNoticesSeen`, IDs cujos avisos já foram fechados nesta sessão. `null` conserva uma pergunta pendente, `false` registra recusa e `true` confirma a inversão. O parser valida referências, ordem relativa dos checks, decisões, unicidade dos pares e avisos vistos; o backup preserva todos. Campos ausentes em bancos v1 antigos são aceitos, sem inferir a ordem passada a partir da posição ou dos campos preenchidos. Não muda a chave/versão do banco.
 
 `Routine` tem `id`, `name`, `note`, `exercises`, `updatedAt` e os campos opcionais `weekdays`/`division`. Uma divisão é o agrupamento `{ id, name }` repetido nas suas rotinas; o conjunto usa `routineIds` e pode reunir rotinas de várias divisões ou avulsas.
 
@@ -76,10 +88,12 @@ Exportação permite preservar dados legados acima do teto de armazenamento quan
 
 ## Evoluir o esquema
 
+`LoggedSet.longRest?: boolean` registra descanso maior que o recomendado antes da série; `LoggedSet.restPause?: boolean` registra a pausa breve de cerca de 5 a 10 segundos durante a execução; `LoggedSet.cramp?: boolean` registra cãibra naquela série. São campos independentes e opcionais: ausência equivale a desmarcado. O parser exige booleanos quando presentes, no treino ativo e no histórico. Finalização, retomada e backup preservam as marcações; iniciar outra sessão não as copia do histórico. Não há mudança de versão ou chave do banco, nem alteração do planejamento ou dos registros antigos. `LoggedExercise.cramp` permanece um impedimento legado do exercício inteiro, sem distribuição automática entre séries.
+
 Os campos opcionais acrescentados ao banco v1 mantêm a leitura dos registros antigos. Teste esse comportamento antes de mudar tipos ou parser. Mudanças de versão/chave/formato que quebrem a leitura exigem migração explícita e testes; nunca resete o banco como solução genérica de erro. IDs musculares persistidos e IDs que ligam rotinas/exercícios/sessões devem continuar estáveis.
 
 ## Observações e impedimentos do exercício
 
 `PlannedExercise.note?: string` e `LoggedExercise.note?: string` guardam texto livre de até 300 caracteres. O início copia a observação planejada. `setActiveExerciseNote` altera explicitamente a sessão atual e o exercício correspondente no planejamento por IDs, preservando o histórico, as séries e outras rotinas. Editar a nota no planejamento não reescreve um treino ativo. A importação `ritmo/1` aceita `nota` opcional em cada exercício; backups incluem os dois campos.
 
-`cramp` mantém o nome persistido anterior, mas representa **Impedimento** na interface, incluindo cansaço, cãibra e outras dificuldades. `LoggedExercise.externalImpediment?: boolean` representa situações externas e bloqueia as sugestões automáticas enquanto a sessão estiver entre as duas comparadas. Todos os novos campos são opcionais; bancos v1 anteriores sem esses campos continuam válidos, sem limpeza ou migração destrutiva.
+`LoggedExercise.cramp` mantém o significado anterior de **Impedimento** para todo o exercício, incluindo cansaço, cãibra e outras dificuldades. É preservado nos registros antigos e nas regras legadas, sem novo controle para marcá-lo. Novas cãibras usam `LoggedSet.cramp`, por série, com as mesmas ressalvas visuais das outras marcações de execução. `LoggedExercise.externalImpediment?: boolean` representa situações externas e bloqueia as sugestões automáticas enquanto a sessão estiver entre as duas comparadas. Todos os novos campos são opcionais; bancos v1 anteriores sem esses campos continuam válidos, sem limpeza ou migração destrutiva.

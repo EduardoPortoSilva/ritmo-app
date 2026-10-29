@@ -28,6 +28,12 @@ Cada exercício também aceita `nota` opcional: texto livre de até 300 caracter
 
 Uma importação aceita até 20 divisões e 50 rotinas somando treinos e cardios; o texto pode ter até 100.000 caracteres. Nomes de divisões, treinos no mesmo local e cardios não podem repetir nomes existentes ou nomes do próprio lote (comparação sem diferença entre maiúsculas e acentos). A importação **acrescenta** planejamento e não substitui rotinas anteriores, sessões ativas ou histórico. Não inclua carga/peso: esses valores são registrados na execução, não no planejamento.
 
+## Modelos de calorias de força (opcional)
+
+Um exercício pode incluir `calorias`: `{ "expressao": "totalLoad * reps * k", "passos": [], "parametros": { "k": 0.01 }, "referencia": "Exemplo matemático fictício, sem validade fisiológica", "carga": "por_lado", "multiplicador": 1, "segundosPorRepeticao": 3 }`. O coeficiente do exemplo não estima gasto real. `carga` aceita `total`, `por_lado`, `por_halter` ou `unilateral`. Expressão, variáveis, unidades e limites estão em [Fórmulas](FORMULAS.md). Sem modelo fundamentado, omita o campo.
+
+Esse campo cria modelos em rotinas **novas**. Para editar modelos de exercícios já cadastrados, use **Editar fórmulas em lote**, formato `ritmo-formulas/1`, com os IDs exportados do app. Não importe novamente a rotina para atualizar sua fórmula.
+
 ## Exemplo válido
 
 ```json

@@ -46,6 +46,8 @@ Use Prettier nos arquivos alterados. Evite reformatação ampla quando houver tr
 
 Os testes de domínio usam `node --test`. Os testes Playwright compilam a versão web de produção e a servem localmente em `127.0.0.1:8081`. Na primeira execução, instale o navegador com `npx.cmd playwright install chromium`.
 
+Para teclado, `tests/keyboard-geometry.test.mts` cobre a área visível e `tests/e2e/keyboard-scroll.spec.ts` reduz o viewport em formulários, séries, modais e JSON longo. Reduzir o viewport no Playwright não abre um IME Android real. Valide também em AVD exclusivo com teclado virtual habilitado: o campo e rótulo devem ficar acima do teclado, a rolagem manual deve permanecer disponível e Salvar deve funcionar no primeiro toque. Não use dados pessoais para esse ensaio; registre os limites da versão Android efetivamente testada em `docs/ESTADO.md`.
+
 O Playwright limpa `.playwright-results/` antes de cada execução; traces e capturas de falhas ficam nesse diretório descartável. `test-results/` guarda capturas nomeadas e relatos manuais e não deve ser usado como `outputDir`. Preserve as evidências de rodadas anteriores.
 
 Confira se a porta 8081 está livre ou se o servidor existente é o correto: a configuração permite reutilização fora de CI. O script `test:e2e` já executa `build:web`; não é necessário duplicar a compilação.
@@ -68,6 +70,34 @@ A saída fica em `android/app/build/outputs/apk/release/app-release.apk`. ARM64 
 `android/` e `ios/` são gerados e ignorados pelo Git. Prebuild pode regenerar arquivos; confirme que não há alterações nativas manuais importantes antes de executá-lo. Não trate correções feitas apenas nesses diretórios como solução durável.
 
 O build release exige a chave privada local em `.tools/signing/`; sem ela, o Gradle falha em vez de usar a chave de desenvolvimento. Gere a chave uma única vez com `scripts/create-release-key.ps1`, guarde uma cópia segura de ambos os arquivos e siga [Backup e assinatura](BACKUP-E-ASSINATURA.md). Builds debug continuam usando a chave de desenvolvimento. `eas.json` contém perfis de nuvem, mas a assinatura local configurada aqui não se aplica automaticamente ao EAS.
+
+### Compilar e instalar no Pixel com um comando
+
+No Windows, abra o AVD **Pixel 7 (2)** (`Pixel_7_2`) e execute em `mobile/`:
+
+```powershell
+npm.cmd run apk:pixel
+```
+
+`scripts/build-install-pixel.ps1` encontra o emulador pelo nome, aguarda até 120 segundos pelo boot, executa o prebuild Android e chama `scripts/build-release.ps1 -NoDaemon`. Em seguida, confere assinatura, pacote/versão do APK e o AVD novamente, instala com `adb install -r`, compara o SHA-256 do APK instalado com o compilado e abre o Ritmo. Dispositivos físicos e AVDs de outro nome são recusados; se a assinatura instalada for incompatível, o Android recusa a atualização e os dados ficam preservados. Falhas de compilação interrompem o fluxo antes de qualquer instalação.
+
+Requer Node, dependências instaladas, JDK 17, SDK Android e a assinatura privada existente. O SDK vem de `ANDROID_HOME`, `ANDROID_SDK_ROOT` ou `%LOCALAPPDATA%\Android\Sdk`; o JDK local em `.tools/jdk17/jdk-17.0.20.1+1` tem prioridade sobre `JAVA_HOME`. A saída permanece em `android/app/build/outputs/apk/release/app-release.apk`. O comando usa a versão definida em `app.json`; para distribuir uma nova entrega, incremente o `versionCode` e siga a cópia/verificação em [Backup e assinatura](BACKUP-E-ASSINATURA.md).
+
+Para alterações somente em JavaScript/TypeScript, é possível reutilizar a configuração Android gerada e evitar o prebuild:
+
+```powershell
+npm.cmd run apk:pixel -- -SkipPrebuild
+```
+
+Use o comando padrão após alterar `app.json`, plugins ou dependências. Sem a pasta Android, mesmo `-SkipPrebuild` prepara o projeto. Execute os testes da matriz de validação conforme a alteração; o comando de instalação faz a compilação e as conferências do APK/AVD.
+
+Para selecionar outro AVD de teste ou resolver ambiguidade entre emuladores:
+
+```powershell
+npm.cmd run apk:pixel -- -AvdName Pixel_7_2 -Serial emulator-5554 -BootTimeoutSeconds 180
+```
+
+O AVD precisa estar ligado. Se outro build/daemon deste projeto mantiver arquivos bloqueados no prebuild, encerre esse processo antes de repetir. `-NoDaemon` faz o Gradle desta execução terminar após o build, reduzindo bloqueios nas próximas rodadas; o instalador não encerra processos de outros projetos.
 
 ## Teste no emulador e entrega
 

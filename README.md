@@ -12,7 +12,7 @@ Aplicativo pessoal de musculação, cardio e hábitos diários, com interface em
 - **Histórico e gráficos:** sessões completas ou parciais, volume, duração, carga máxima, repetições, carga efetiva total, esforço relativo por fase e peso corporal opcional.
 - **Cobertura muscular:** vínculos principais/secundários escolhidos pelo usuário e mapa esquemático de frente e costas.
 - **Cardio:** etapas de duração e velocidade, cronômetro, pausa/retomada e distância esperada/real no histórico.
-- **Suplementos:** registro diário, sequência de dias e lembretes locais opcionais no Android.
+- **Suplementos:** registro diário, sequência de dias, vínculos opcionais com ingestões de substâncias/blends e lembretes locais no Android.
 - **Importação por texto:** planejamento em JSON `ritmo/1`, com conferência e prévia antes de importar o lote.
 - **Backup manual:** exportação e restauração do banco completo em JSON `ritmo-backup/1`.
 - **Android nativo:** widgets compactos de treinos e suplementos em 4×1, 3×1 ou cartão vertical 1×2 e avisos de descanso e de mudança de velocidade do cardio mesmo com outro app aberto ou a tela apagada.
@@ -47,6 +47,8 @@ npm run android
 Esse comando compila e instala uma versão de desenvolvimento. O APK de distribuição tem um fluxo separado, descrito abaixo. O comando iOS existe no template, mas essa plataforma não foi validada.
 
 ## Plataformas
+
+O código inclui acompanhamento de substâncias por modelos configuráveis, estimativa de calorias nas séries de força e edição de fórmulas existentes em lote por JSON. Consulte [Fórmulas](docs/FORMULAS.md) para configuração e limites. A disponibilidade no APK depende da entrega indicada em [Estado](docs/ESTADO.md).
 
 | Recurso                                          | APK Android      | Web                              | Expo Go                                  |
 | ------------------------------------------------ | ---------------- | -------------------------------- | ---------------------------------------- |
@@ -84,18 +86,19 @@ Expo SDK 57, React Native 0.86.3, React 19.2.3 e TypeScript com modo estrito. Pe
 
 ## Comandos principais
 
-| Comando                 | Finalidade                                                   |
-| ----------------------- | ------------------------------------------------------------ |
-| `npm start`             | Servidor Expo                                                |
-| `npm run web`           | Desenvolvimento no navegador                                 |
-| `npm run android`       | Compilar e instalar Android de desenvolvimento               |
-| `npm run typecheck`     | Validar TypeScript                                           |
-| `npm test`              | Testes de domínio e persistência                             |
-| `npm run test:e2e`      | Exportar web de produção e executar Playwright               |
-| `npm run format:check`  | Conferir formatação                                          |
-| `npm run build:web`     | Gerar bundle web em `dist/`                                  |
-| `npm run build:android` | Exportar JavaScript Android; **não gera APK**                |
-| `npm run apk:cloud`     | Perfil EAS preview; exige configuração de conta e assinatura |
+| Comando                 | Finalidade                                                    |
+| ----------------------- | ------------------------------------------------------------- |
+| `npm start`             | Servidor Expo                                                 |
+| `npm run web`           | Desenvolvimento no navegador                                  |
+| `npm run android`       | Compilar e instalar Android de desenvolvimento                |
+| `npm run typecheck`     | Validar TypeScript                                            |
+| `npm test`              | Testes de domínio e persistência                              |
+| `npm run test:e2e`      | Exportar web de produção e executar Playwright                |
+| `npm run format:check`  | Conferir formatação                                           |
+| `npm run build:web`     | Gerar bundle web em `dist/`                                   |
+| `npm run build:android` | Exportar JavaScript Android; **não gera APK**                 |
+| `npm run apk:pixel`     | Compilar o APK release, instalar no Pixel 7 (2) e abrir o app |
+| `npm run apk:cloud`     | Perfil EAS preview; exige configuração de conta e assinatura  |
 
 Antes do primeiro teste web, instale o navegador com `npx playwright install chromium`. O Playwright usa `127.0.0.1:8081`. As exportações web/Android compartilham `dist/`; execute-as separadamente.
 
@@ -120,6 +123,22 @@ Saída: `android/app/build/outputs/apk/release/app-release.apk`, com ARM64 e x86
 
 Detalhes, verificação da assinatura e cuidados com atualização em [Backup e assinatura](docs/BACKUP-E-ASSINATURA.md). O fluxo EAS tem configuração própria de credenciais e não foi validado como entrega equivalente ao build local.
 
+Com o AVD **Pixel 7 (2)** (`Pixel_7_2`) ligado, há um comando completo para compilar e instalar o release no Windows:
+
+```powershell
+npm.cmd run apk:pixel
+```
+
+O [script de compilação e instalação](scripts/build-install-pixel.ps1) prepara o Android, usa a chave existente, confere a assinatura e a versão, instala por atualização com `adb install -r` e abre o Ritmo. Localiza o AVD pelo nome, aguarda o boot e confere o hash do APK instalado. Usa a versão de `app.json` e preserva os dados do app.
+
+Para repetir mais rápido quando **só JavaScript/TypeScript mudou**, com o Android já gerado:
+
+```powershell
+npm.cmd run apk:pixel -- -SkipPrebuild
+```
+
+Após mudanças em configuração Expo, plugins ou dependências, use o comando padrão com prebuild. Opções de AVD/serial e requisitos estão em [Desenvolvimento](docs/DESENVOLVIMENTO.md#compilar-e-instalar-no-pixel-com-um-comando).
+
 ## Dados e privacidade
 
 O banco tem `version: 1` e fica na chave `@ritmo/database/v1`. Editar o planejamento não modifica sessões iniciadas ou o histórico. As gravações são serializadas e erros de leitura não apagam o conteúdo salvo.
@@ -132,7 +151,7 @@ Leia [modelo de dados](docs/DADOS.md), [backup](docs/BACKUP-E-ASSINATURA.md) e [
 
 O [índice de documentação](docs/README.md) reúne o guia de uso, arquitetura, regras, testes, cardio, músculos, importação e publicação no Git. Para contribuir, leia [CONTRIBUTING.md](CONTRIBUTING.md) e [AGENTS.md](AGENTS.md).
 
-Versão do app: **1.0.5**, Android `versionCode` **15**. [Estado e validação](docs/ESTADO.md) separa as verificações atuais das evidências históricas. APKs e relatórios locais não acompanham automaticamente um clone do código.
+Versão do app: **1.0.5**, Android `versionCode` **23**. [Estado e validação](docs/ESTADO.md) separa as verificações atuais das evidências históricas. APKs e relatórios locais não acompanham automaticamente um clone do código.
 
 ## Licença
 

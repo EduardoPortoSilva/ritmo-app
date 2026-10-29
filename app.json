@@ -17,7 +17,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.ritmo.treinos",
-      "versionCode": 15,
+      "versionCode": 23,
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [],
